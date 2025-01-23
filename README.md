@@ -2,7 +2,7 @@
 
 #### By _**Sean Keane**_
 
-#### Portfolio Page Capstone - Epicodus Code Review 01/22/2025
+#### Application for pump displays -- 01/22/2025
 
 ## Technologies Used
 
