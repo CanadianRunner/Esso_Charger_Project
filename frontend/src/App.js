@@ -1,29 +1,34 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import ThisSaleDisplay from "./components/ThisSaleDisplay";
-import RotatingMetricsDisplays from "./components/RotatingMetricsDisplays";
+import LifetimeAndMonthlyKWh from "./components/LifeTimeAndMonthlyKWH";
+import PowerAndElapsedTime from "./components/PowerAndElapsedTime";
 import DeliveredEnergy from "./components/DeliveredEnergy";
 import EnergyPrice from "./components/EnergyPrice";
-import axios from "axios";
-//import { FaInfinity, FaCalendar, FaBolt, FaClock } from "react-icons/fa";
+import "./App.css";
 
 function App() {
+  const lifetimeMetrics = [
+    { icon: " 📅 ", value: "456.78 kWh" },  // Using Unicode escape sequence
+    { icon: "∞", value: "12345.67 kWh" },
+  ];
+
+  const powerMetrics = [
+    { icon: "⚡", value: "11.5 kW" },
+    { icon: "⏱️", value: "01:15:32" },
+  ];
+
   return (
     <div className="App">
-      <ThisSaleDisplay cost={12.45} />
-      <RotatingMetricsDisplays
-        metrics={[
-          { icon: "∞", value: "12345.67 kWh" },
-          { icon: "📅", value: "456.78 kWh" },
-        ]}
-      />
-      <RotatingMetricsDisplays
-        metrics={[
-          { icon: "⚡", value: "11.5 kW" },
-          { icon: "⏱️", value: "01:15:32" },
-        ]}
-      />
-      <DeliveredEnergy kWh={5.75} />
-      <EnergyPrice price={0.13} />
+      <ThisSaleDisplay cost={123.45} />
+      <LifetimeAndMonthlyKWh metrics={lifetimeMetrics} />
+      <PowerAndElapsedTime metrics={powerMetrics} />
+      <div style={{ display: "flex", gap: "20px" }}>
+        <DeliveredEnergy kWh={5.75} />
+        <EnergyPrice price={0.13} />
+      </div>
+      <div>
+  📅 Calendar Emoji Test
+</div>
     </div>
   );
 }

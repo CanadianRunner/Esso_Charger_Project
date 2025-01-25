@@ -1,0 +1,28 @@
+.metric-display {
+  display: flex;
+  justify-content: center;
+
+  .metric-value {
+    display: flex;
+    gap: 4px;
+  }
+
+  .digit-box {
+    width: 25px;
+    height: 40px;
+    background-color: #fff;
+    color: #000;
+    font-family: "Digital-7 Mono", "Segoe UI Emoji", Arial, sans-serif; /* Added Segoe UI Emoji */
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #333;
+  
+    &:first-child {
+      font-size: 20px;
+      font-family: "Segoe UI Emoji", Arial, sans-serif; /* Ensures emoji fallback for first child */
+    }
+  }
+}
