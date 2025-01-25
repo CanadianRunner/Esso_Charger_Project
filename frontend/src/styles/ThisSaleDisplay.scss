@@ -1,0 +1,17 @@
+.this-sale-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: "Digital-7 Mono", monospace;
+  color: #000;
+}
+
+.sale-label {
+  font-size: 16px;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.sale-value {
+  font-size: 24px;
+}

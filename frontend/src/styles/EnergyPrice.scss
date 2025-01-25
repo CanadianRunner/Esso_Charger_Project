@@ -1,0 +1,13 @@
+.energy-price {
+  display: flex;
+  justify-content: space-between;
+  font-family: "Digital-7 Mono", monospace;
+  color: #000;
+}
+.metric-label {
+  font-size: 14px;
+  font-weight: bold;
+}
+.metric-value {
+  font-size: 16px;
+}

@@ -1,23 +1,29 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import ThisSaleDisplay from "./components/ThisSaleDisplay";
+import RotatingMetricsDisplays from "./components/RotatingMetricsDisplays";
+import DeliveredEnergy from "./components/DeliveredEnergy";
+import EnergyPrice from "./components/EnergyPrice";
+import axios from "axios";
+//import { FaInfinity, FaCalendar, FaBolt, FaClock } from "react-icons/fa";
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <ThisSaleDisplay cost={12.45} />
+      <RotatingMetricsDisplays
+        metrics={[
+          { icon: "∞", value: "12345.67 kWh" },
+          { icon: "📅", value: "456.78 kWh" },
+        ]}
+      />
+      <RotatingMetricsDisplays
+        metrics={[
+          { icon: "⚡", value: "11.5 kW" },
+          { icon: "⏱️", value: "01:15:32" },
+        ]}
+      />
+      <DeliveredEnergy kWh={5.75} />
+      <EnergyPrice price={0.13} />
     </div>
   );
 }
