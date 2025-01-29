@@ -21,11 +21,9 @@
     border: 1px solid #333;
   }
   
-  /* Special styling for the first digit box (icon) */
   .digit-box:first-child {
     font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
     font-size: 20px;
-    /* Remove font-weight for better emoji rendering */
     font-weight: normal;
   }
 }

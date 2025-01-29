@@ -8,18 +8,18 @@ import "./App.css";
 
 function App() {
   const lifetimeMetrics = [
-    { icon: " 📅 ", value: "456.78 kWh" },  // Using Unicode escape sequence
-    { icon: "∞", value: "12345.67 kWh" },
+    { icon: "📅", value: "456.78" },  // Monthly usage (11 digits)
+    { icon: "∞", value: "12345.67" }, // Lifetime usage (13 digits)
   ];
-
+  
   const powerMetrics = [
-    { icon: "⚡", value: "11.5 kW" },
-    { icon: "⏱️", value: "01:15:32" },
+    { icon: "⚡", value: "11.5" },     // Current power (8 digits)
+    { icon: "⏱️", value: "01:15:32" }, // Elapsed time (8 digits)
   ];
 
   return (
     <div className="App">
-      <ThisSaleDisplay cost={123.45} />
+      <ThisSaleDisplay cost={123.76} />
       <LifetimeAndMonthlyKWh metrics={lifetimeMetrics} />
       <PowerAndElapsedTime metrics={powerMetrics} />
       <div style={{ display: "flex", gap: "20px" }}>
@@ -27,7 +27,6 @@ function App() {
         <EnergyPrice price={0.13} />
       </div>
       <div>
-  📅 Calendar Emoji Test
 </div>
     </div>
   );

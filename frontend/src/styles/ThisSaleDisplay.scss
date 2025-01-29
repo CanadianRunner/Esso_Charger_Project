@@ -1,17 +1,56 @@
-.this-sale-display {
+.sale-dials {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-family: "Digital-7 Mono", monospace;
-  color: #000;
+  gap: 2px;
 }
 
-.sale-label {
-  font-size: 16px;
-  margin-bottom: 8px;
+.dial {
+  width: 100px;
+  height: 140px;
+  background-color: #fff;
+  border: 2px solid #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.large-digit {
+  font-family: "Digital-7 Mono", monospace;
+  font-size: 70px;
+  color: #000;
   font-weight: bold;
 }
 
-.sale-value {
-  font-size: 24px;
+.with-tenths {
+  width: 130px;
+  padding: 0;
+  position: relative;
+  border-top-right-radius: 70px;
+  border-bottom-right-radius: 70px;
+}
+
+.tenths-container {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+}
+
+.tenths-num {
+  font-family: "Digital-7 Mono", monospace;
+  font-size: 50px;
+  font-weight: bold;
+  color: #000;
+  padding-right: 55px;
+}
+
+.tenths-fraction {
+  font-family: "Digital-7 Mono", monospace;
+  font-size: 32px;
+  font-weight: bold;
+  color: #000;
+  align-self: center;
+  margin-top: -10px;
 }

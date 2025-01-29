@@ -10,7 +10,6 @@
   text-align: center;
 }
 
-/* Rotating metric displays */
 .rotating-metrics-displays,
 .lifetime-monthly-kwh,
 .power-elapsed-time {
@@ -35,7 +34,7 @@
   height: 40px;
   background-color: #fff;
   color: #000;
-  font-family: "Digital-7 Mono", "Segoe UI Emoji", Arial, sans-serif; /* Added Segoe UI Emoji */
+  font-family: "Digital-7 Mono", "Segoe UI Emoji", Arial, sans-serif;
   font-size: 24px;
   font-weight: bold;
   display: flex;
@@ -45,11 +44,10 @@
 
   &:first-child {
     font-size: 20px;
-    font-family: "Segoe UI Emoji", Arial, sans-serif; /* Ensures emoji fallback for first child */
+    font-family: "Segoe UI Emoji", Arial, sans-serif;
   }
 }
 
-/* This sale display */
 .this-sale-display {
   background-color: #fff;
   color: #000;
@@ -68,7 +66,6 @@
   font-size: 24px;
 }
 
-/* Delivered energy and energy price */
 .delivered-energy,
 .energy-price {
   background-color: #fff;
