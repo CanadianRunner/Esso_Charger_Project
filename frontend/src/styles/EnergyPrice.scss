@@ -1,13 +1,45 @@
-.energy-price {
+.price-dials {
   display: flex;
-  justify-content: space-between;
-  font-family: "Digital-7 Mono", monospace;
-  color: #000;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 60px;
 }
-.metric-label {
-  font-size: 14px;
+
+.dial {
+  width: 100px;
+  height: 140px;
+  background-color: #000;
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.large-digit {
+  font-family: "Digital-7 Mono", monospace;
+  font-size: 70px;
+  color: #fff;
   font-weight: bold;
 }
-.metric-value {
-  font-size: 16px;
+
+.price-dials {
+  display: flex;
+  justify-content: space-between;
+  gap: 130px;
+  margin-top: 10px;
 }
+
+.delivered-energy-dials {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+}
+
+.with-tenths {
+  width: 100px;
+  position: relative;
+  background-color: #000;
+  border: 2px solid #fff;
+}
+

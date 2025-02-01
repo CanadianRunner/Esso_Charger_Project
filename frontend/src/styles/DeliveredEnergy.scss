@@ -1,13 +1,66 @@
-.delivered-energy {
+.delivered-energy-dials {
   display: flex;
-  justify-content: space-between;
-  font-family: "Digital-7 Mono", monospace;
-  color: #000;
+  justify-content: center;
+  gap: 40px !important;
 }
-.metric-label {
-  font-size: 14px;
+
+.dial {
+  width: 100px;
+  height: 140px;
+  background-color: #000;
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.large-digit {
+  font-family: "Digital-7 Mono", monospace;
+  font-size: 70px;
+  color: #fff;
   font-weight: bold;
 }
-.metric-value {
-  font-size: 16px;
+
+.with-tenths {
+  width: 100px;
+  position: relative;
+  background-color: #000;
+  border: 2px solid #fff;
+  border-top-right-radius: 70px;
+  border-bottom-right-radius: 70px;
+}
+
+.tenths-container {
+  position: absolute;
+  top: 20px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tenths-num {
+  font-family: "Digital-7 Mono", monospace;
+  font-size: 50px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.tenths-fraction {
+  font-family: "Digital-7 Mono", monospace;
+  font-size: 32px;
+  font-weight: bold;
+  color: #fff;
+  margin-top: -10px;
+}
+
+.static-arrow {
+  position: absolute;
+  right: 0px;
+  bottom: 50%;
+  transform: translateY(50%) rotate(-90deg);
+  width: 20px;
+  height: 18px;
+  background-color: #d32f2f;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
 }

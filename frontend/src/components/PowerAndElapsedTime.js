@@ -12,7 +12,7 @@ function PowerAndElapsedTime({ metrics }) {
 
   const currentMetric = metrics[currentIndex];
   const isPower = currentMetric.icon === "⚡";
-  const MAX_DIGITS = 8;  // Fixed 8 digits for both power and time
+  const MAX_DIGITS = 11;  // Fixed 8 digits for both power and time
   
   const formattedValue = isPower
     ? parseFloat(currentMetric.value).toFixed(1).padStart(MAX_DIGITS - 3, ' ') + " kW"
