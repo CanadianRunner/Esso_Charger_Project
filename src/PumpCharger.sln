@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpCharger.Core", "PumpCharger.Core\PumpCharger.Core.csproj", "{918CA3E5-42D6-4729-AA9F-DAC6CDAF7D88}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpCharger.Api", "PumpCharger.Api\PumpCharger.Api.csproj", "{43C5D1F7-F4ED-4E31-830E-FC0778458BE3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PumpCharger.Tests", "PumpCharger.Tests\PumpCharger.Tests.csproj", "{D96DBDD6-075B-4AB4-80A5-9DB0E2ACC438}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{918CA3E5-42D6-4729-AA9F-DAC6CDAF7D88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{918CA3E5-42D6-4729-AA9F-DAC6CDAF7D88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{918CA3E5-42D6-4729-AA9F-DAC6CDAF7D88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{918CA3E5-42D6-4729-AA9F-DAC6CDAF7D88}.Release|Any CPU.Build.0 = Release|Any CPU
+		{43C5D1F7-F4ED-4E31-830E-FC0778458BE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{43C5D1F7-F4ED-4E31-830E-FC0778458BE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{43C5D1F7-F4ED-4E31-830E-FC0778458BE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{43C5D1F7-F4ED-4E31-830E-FC0778458BE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D96DBDD6-075B-4AB4-80A5-9DB0E2ACC438}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D96DBDD6-075B-4AB4-80A5-9DB0E2ACC438}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D96DBDD6-075B-4AB4-80A5-9DB0E2ACC438}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D96DBDD6-075B-4AB4-80A5-9DB0E2ACC438}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

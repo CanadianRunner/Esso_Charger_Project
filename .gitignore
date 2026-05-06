@@ -33,6 +33,7 @@ TestResults/
 node_modules/
 dist/
 .vite/
+*.tsbuildinfo
 *.local
 .env
 .env.*
@@ -43,7 +44,7 @@ logs/
 *.log
 
 # Local dev data
-data/
+var/
 backups/
 
 # Reference photos (large; user adds to docs/reference/ manually)
