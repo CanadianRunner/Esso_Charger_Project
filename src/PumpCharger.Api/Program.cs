@@ -13,7 +13,11 @@ builder.Configuration
 builder.Services.Configure<DatabaseOptions>(builder.Configuration.GetSection(DatabaseOptions.SectionName));
 builder.Services.Configure<PumpOptions>(builder.Configuration.GetSection(PumpOptions.SectionName));
 
-var loggingPath = builder.Configuration["Logging:Path"] ?? "logs/";
+var contentRoot = builder.Environment.ContentRootPath;
+
+var loggingPath = PathResolver.Resolve(
+    contentRoot,
+    builder.Configuration["Logging:Path"] ?? "var/logs/");
 Directory.CreateDirectory(loggingPath);
 
 builder.Host.UseSerilog((context, services, configuration) =>
@@ -30,8 +34,10 @@ builder.Host.UseSerilog((context, services, configuration) =>
             retainedFileCountLimit: 14);
 });
 
-var dbPath = builder.Configuration["Database:Path"] ?? "data/pumpcharger.db";
-var dbDir = Path.GetDirectoryName(Path.GetFullPath(dbPath));
+var dbPath = PathResolver.Resolve(
+    contentRoot,
+    builder.Configuration["Database:Path"] ?? "var/pumpcharger.db");
+var dbDir = Path.GetDirectoryName(dbPath);
 if (!string.IsNullOrEmpty(dbDir))
 {
     Directory.CreateDirectory(dbDir);
