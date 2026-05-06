@@ -60,6 +60,19 @@ npm run dev
 
 Then open http://localhost:5173.  The dev API listens on 5050 instead of 5000 because macOS AirPlay Receiver squats on port 5000; production on the Pi will use 5000.
 
+## Update #3 (05/05/2026)
+
+_Phase 2 is complete -- fake-first external clients:_  every external integration (HPWC, Shelly, OpenEI) now sits behind an interface in `PumpCharger.Core` with both a real-stub and a fake implementation chosen at startup by a config flag.  In dev mode the app boots into Fake mode automatically and runs entirely on simulated data, so I can build and demo the whole pump display before any hardware is installed.
+
+The HPWC fake is a proper state-machine simulator -- it walks Idle → Plugged → Charging → CyclingPause → ChargingResumed → SessionComplete on its own, accumulating session and lifetime energy at a configurable kW rate, and a `TimeAcceleration` knob (default 5x in dev) compresses the full cycle to about 88 real seconds.  The Shelly fake mirrors the same circuit so its readings are consistent with the HPWC, and the OpenEI fake serves canned schedules so the rate-pull logic can be exercised without a real API key.
+
+I also added two controllers for driving and observing the simulator while developing:
+
+* `POST /api/demo/plug-in`, `/unplug`, `/start-charging`, `/stop-charging`, `/trigger-cycling`, `/simulate-network-failure` -- jump the simulator straight to a state without waiting on the natural cycle.
+* `GET /api/dev/hpwc/vitals`, `/lifetime`, `/version` and the matching Shelly + OpenEI read-back endpoints -- whatever the rest of the app sees, you can see too.
+
+The simulator has full xUnit coverage including auto-transitions, energy accumulation across both charge windows, contactor and connector cycle counters, the network-failure window, and every manual demo control.  Test count is up to 19 and CI is green.
+
 
 ## Known Bugs
 
