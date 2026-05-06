@@ -1,107 +1,75 @@
-# Esso Charger Project
+# _Esso Pump EV Charger Conversion_
 
-A vintage 1950s Esso gas pump converted into a Tesla EV charger station.
-Backend is .NET 8 + ASP.NET Core + EF Core + SQLite. Frontend is React 18 +
-Vite + TypeScript + Tailwind. Designed to run on a Raspberry Pi 5 inside the
-pump in production, fully demoable on a developer laptop with simulated
-hardware in development.
+#### By _**Sean Keane**_
 
-The complete project specification lives in [docs/BUILD_SPEC.md](docs/BUILD_SPEC.md).
+#### Application for pump displays -- 01/22/2025
 
-## Repository status
+## Technologies Used
 
-This is the **Phase 1 foundation**: solution scaffold, entities and EF
-migrations, Program.cs wiring, a `/api/health` endpoint, a Vite + React +
-Tailwind frontend skeleton, and CI. None of the charging logic, fake or real
-clients, SignalR hubs, or pump-display visuals exist yet — those come in
-later phases per the build spec.
+* .NET 8 / ASP.NET Core
+* Entity Framework Core
+* SQLite (Litestream replication)
+* SignalR
+* React 18
+* TypeScript
+* Vite
+* Tailwind CSS
 
-A previous attempt is preserved on the `v1` branch for reference.
+## Description
 
-## Layout
+This is a personal project I've undertaken that combines my love for software and hardware.  I am converting a restored 1950s gas pump into an electric vehicle charger.  This project goes beyond charging infrastructure; I plan on replacing the rotary dials with cleverly disguised displays that will output the number of kWh delivered, charge cost (based on my home rates), and other relevant metrics.
 
-```
-src/
-  PumpCharger.sln
-  PumpCharger.Core/    – domain POCOs, no infra deps
-  PumpCharger.Api/     – ASP.NET Core host
-  PumpCharger.Tests/   – xUnit
-web/                   – Vite + React + TypeScript + Tailwind
-docs/                  – build spec lives here
-.github/workflows/     – CI pipeline
-```
+I plan to update this README with images and my progress as I tackle the unforeseen challenges of bringing this project to life.
 
-## Prerequisites
+## Update #1 (01/22/2025)
 
-- .NET 8 SDK (`dotnet --version` ≥ 8.0)
-- Node 20+ (`node --version` ≥ 20)
-- `dotnet-ef` global tool: `dotnet tool install --global dotnet-ef`
+I've acquired my gas pump and started the project's hardware and software planning phase! 
 
-## Run locally
+_My hardware decisions thus far:_
 
-In one terminal:
+I plan to use Tesla's HPWC to juice up my vehicles physically.  I will use OpenEVSE's Wi-Fi kit and C-clamp adapters to measure and report the kWh delivered each session.  I will use a Raspberry Pi 5 to run my application and consume/output data.  I will use two small outdoor-rated displays in place of the physical rotary dials.  I will have to run 240-v power to the charger, 120v to the supporting infrastructure, and ethernet to the Raspberry Pi (I imagine Wi-Fi will be spotty in my new Esso branded Faraday box).  To protect this project, I will need to make additional improvements to the waterproofing, airflow, and humidity control.
+
+_On the software front:_
+
+I have scaffolded a rough starting point for the application, with the frontend (React) and backend (Python) contained in the same directory.  I want to consume an API that pulls my power company price per/kWh to prevent the need for manual updates over the years.  I would like to display the lifetime kWh delivered so I can take preventative measures in case of unit failure, power outages, etc.  I will send saved metrics to my remote server as a failover, as I'd like to utilize this system for years to come.
+
+## Update #2 (05/05/2026)
+
+After a first pass on the `v1` branch, I rebooted the application on a new stack: .NET 8 + ASP.NET Core for the backend with EF Core + SQLite, and React 18 + TypeScript + Vite + Tailwind for the frontend.  Real-time data will flow over SignalR.  The Shelly Pro EM-50 (with CT clamps) replaces OpenEVSE for energy metering, and the Tesla HPWC's local HTTP API is now the primary data source for both session detection and lifetime kWh.
+
+The architecture is "local-dev-first" -- fake HPWC and Shelly clients let me build, run, and demo the entire pump display on a laptop with no hardware connected.  The full project specification lives in [docs/BUILD_SPEC.md](docs/BUILD_SPEC.md).
+
+_Phase 1 is complete -- foundation:_  solution scaffold, the five domain entities (Session, LifetimeSnapshot, Setting, RateHistory, AuditLog), an initial EF migration, Serilog wiring, a `/api/health` endpoint, the Vite + Tailwind frontend skeleton, xUnit smoke tests, and a GitHub Actions CI pipeline.
+
+To run locally:
 
 ```bash
+# Backend (terminal 1)
 cd src/PumpCharger.Api
 dotnet run
-```
 
-The API listens on **http://localhost:5050** in development.
-(Production uses port 5000; macOS ships AirPlay Receiver on that port,
-which is why dev is shifted to 5050.)
-
-In a second terminal:
-
-```bash
+# Frontend (terminal 2)
 cd web
 npm install
 npm run dev
 ```
 
-Then open http://localhost:5173. You should see the Phase 1 health-check
-panel pulling from `GET /api/health` through Vite's dev proxy.
+Then open http://localhost:5173.  The dev API listens on 5050 instead of 5000 because macOS AirPlay Receiver squats on port 5000; production on the Pi will use 5000.
 
-## EF Core migrations
+## Restored Pump:
 
-Migrations live in `src/PumpCharger.Api/Data/Migrations/`. The app applies
-pending migrations on startup automatically, but you can run them by hand:
+![RestoredPump](images/starter_pump.png)
 
-```bash
-cd src/PumpCharger.Api
-dotnet ef database update
-```
 
-The dev database file lives at `src/PumpCharger.Api/var/pumpcharger.db`
-(gitignored). Production uses `/var/lib/pumpcharger/pumpcharger.db`.
+## Known Bugs
 
-## Tests
+* No known bugs
 
-```bash
-cd src
-dotnet test PumpCharger.sln
-```
 
-## Production build
+## License
 
-```bash
-cd web && npm run build
-cd ../src/PumpCharger.Api && dotnet publish -c Release -r linux-arm64 --self-contained -o /tmp/publish
-```
+If you have any questions or concerns feel free to contact me at code@sean-keane.com
 
-The Vite build will eventually be wired into the .NET publish step so the
-React app is served from Kestrel. For Phase 1, frontend and backend are run
-side-by-side via the Vite dev proxy.
+*This is licensed under the MIT license*
 
-## Configuration
-
-`appsettings.json` holds production defaults with placeholder values for
-hardware integrations (`REPLACE_WITH_HPWC_IP_OR_HOSTNAME`, etc.) — fill
-these in before deploying to the Pi.
-
-`appsettings.Development.json` is committed and uses fake-mode flags
-(`Hpwc.Mode = "Fake"`, etc.). Phase 1 does not yet read those flags; the
-fake clients themselves arrive in Phase 2.
-
-Reference photos referenced by the build spec belong in `docs/reference/`.
-That directory is gitignored for image files (they're large and personal);
-drop them in locally with the filenames listed in the spec.
+Copyright (c) 01-22-2025 **_Sean Keane_**
