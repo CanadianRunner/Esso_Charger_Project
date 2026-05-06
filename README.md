@@ -21,6 +21,10 @@ This is a personal project I've undertaken that combines my love for software an
 
 I plan to update this README with images and my progress as I tackle the unforeseen challenges of bringing this project to life.
 
+## Restored Pump:
+
+![RestoredPump](images/starter_pump.png)
+
 ## Update #1 (01/22/2025)
 
 I've acquired my gas pump and started the project's hardware and software planning phase! 
@@ -55,10 +59,6 @@ npm run dev
 ```
 
 Then open http://localhost:5173.  The dev API listens on 5050 instead of 5000 because macOS AirPlay Receiver squats on port 5000; production on the Pi will use 5000.
-
-## Restored Pump:
-
-![RestoredPump](images/starter_pump.png)
 
 
 ## Known Bugs
