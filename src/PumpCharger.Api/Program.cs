@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PumpCharger.Api.Config;
 using PumpCharger.Api.Data;
+using PumpCharger.Api.Extensions;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,6 +46,8 @@ if (!string.IsNullOrEmpty(dbDir))
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite($"Data Source={dbPath}"));
+
+builder.Services.AddExternalClients(builder.Configuration);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
