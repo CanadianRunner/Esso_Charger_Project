@@ -41,7 +41,7 @@ I have scaffolded a rough starting point for the application, with the frontend 
 
 After a first pass on the `v1` branch, I rebooted the application on a new stack: .NET 8 + ASP.NET Core for the backend with EF Core + SQLite, and React 18 + TypeScript + Vite + Tailwind for the frontend.  Real-time data will flow over SignalR.  The Shelly Pro EM-50 (with CT clamps) replaces OpenEVSE for energy metering, and the Tesla HPWC's local HTTP API is now the primary data source for both session detection and lifetime kWh.
 
-The architecture is "local-dev-first" -- fake HPWC and Shelly clients let me build, run, and demo the entire pump display on a laptop with no hardware connected.  The full project specification lives in [docs/BUILD_SPEC.md](docs/BUILD_SPEC.md).
+The architecture is "local-dev-first" -- fake HPWC and Shelly clients let me build, run, and demo the entire pump display on a laptop with no hardware connected.
 
 _Phase 1 is complete -- foundation:_  solution scaffold, the five domain entities (Session, LifetimeSnapshot, Setting, RateHistory, AuditLog), an initial EF migration, Serilog wiring, a `/api/health` endpoint, the Vite + Tailwind frontend skeleton, xUnit smoke tests, and a GitHub Actions CI pipeline.
 

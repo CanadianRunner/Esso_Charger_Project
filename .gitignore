@@ -52,3 +52,6 @@ docs/reference/*.jpg
 docs/reference/*.jpeg
 docs/reference/*.png
 !docs/reference/.gitkeep
+
+# Personal design brief, not for public repo
+docs/BUILD_SPEC.md
