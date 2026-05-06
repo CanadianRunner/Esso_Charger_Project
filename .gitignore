@@ -1,0 +1,53 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# .NET
+bin/
+obj/
+out/
+publish/
+*.pdb
+*.dll
+*.exe
+*.nupkg
+.vs/
+TestResults/
+
+# EF / SQLite
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Node / web
+node_modules/
+dist/
+.vite/
+*.local
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Local dev data
+data/
+backups/
+
+# Reference photos (large; user adds to docs/reference/ manually)
+docs/reference/*.jpg
+docs/reference/*.jpeg
+docs/reference/*.png
+!docs/reference/.gitkeep
