@@ -20,6 +20,10 @@ export default function DialsPreview() {
       <header>
         <h1 className="text-3xl font-semibold">Odometer Dial Preview</h1>
         <p className="text-neutral-400 mt-1">Static and animated samples for visual review.</p>
+        <p className="text-neutral-500 text-sm mt-1">
+          Dials are framed against a faceplate-cream background to mirror how they'll
+          actually appear behind the pump's painted face.
+        </p>
       </header>
 
       <Section title="Zone 1 layout — large 4-digit + 2 decimals + D-cap (THIS $ SALE)">
@@ -64,11 +68,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <section>
       <h2 className="text-sm uppercase tracking-widest text-neutral-500 mb-3">{title}</h2>
-      <div className="flex">{children}</div>
+      <div
+        className="flex items-center p-6 rounded"
+        style={{ background: '#efe9d8' }}
+      >
+        {children}
+      </div>
     </section>
   );
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <span className="text-4xl font-bold text-white">{children}</span>;
+  return (
+    <span
+      className="text-4xl font-black font-odometer tracking-wide"
+      style={{ color: '#1a1206' }}
+    >
+      {children}
+    </span>
+  );
 }

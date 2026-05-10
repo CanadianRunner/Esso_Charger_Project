@@ -67,16 +67,22 @@ export default function OdometerDigit({
 
   const cells = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0]; // 11 entries, last is wrap target
 
+  const cornerRadius = hasDCap
+    ? { borderTopRightRadius: '50%', borderBottomRightRadius: '50%' }
+    : { borderTopRightRadius: 0, borderBottomRightRadius: 0 };
+
   return (
     <div
       className="relative overflow-hidden bg-black"
       style={{
         width: digitWidth,
         height: windowHeight,
-        borderTopRightRadius: hasDCap ? '50%' : 0,
-        borderBottomRightRadius: hasDCap ? '50%' : 0,
+        // Deep warm near-black reads as painted metal rather than an LCD pixel grid.
+        background: '#0b0907',
+        ...cornerRadius,
       }}
     >
+      {/* Rolling reel — digits translate underneath the fixed lighting overlays. */}
       <div
         style={{
           transform: `translateY(${padding - position * digitHeight}px)`,
@@ -86,17 +92,49 @@ export default function OdometerDigit({
         {cells.map((d, i) => (
           <div
             key={i}
-            className="flex items-center justify-center text-white font-odometer font-black tabular-nums leading-none select-none"
+            className="flex items-center justify-center font-odometer font-black tabular-nums leading-none select-none"
             style={{
               height: digitHeight,
               width: digitWidth,
               fontSize,
+              color: '#f8f3e1',
+              // Subtle dark drop-shadow on the digit gives a hint of depth/embossing
+              // against the drum surface.
+              textShadow: '0 2px 0 rgba(0,0,0,0.55), 0 -1px 0 rgba(255,255,255,0.04)',
             }}
           >
             {d}
           </div>
         ))}
       </div>
+
+      {/* Halogen light: fixed on the window, brightest at top, fading into ambient
+          darkness near the bottom. Warm ~2700K tint sells incandescent over daylight. */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(to bottom, ' +
+            'rgba(255, 232, 175, 0.22) 0%, ' +
+            'rgba(255, 232, 175, 0.10) 28%, ' +
+            'rgba(255, 232, 175, 0.00) 55%, ' +
+            'rgba(0, 0, 0, 0.18) 85%, ' +
+            'rgba(0, 0, 0, 0.32) 100%)',
+          ...cornerRadius,
+        }}
+      />
+
+      {/* Cylindrical curve: top and bottom edges of the window look like the drum is
+          bending away from view, not a flat scrolling strip. */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          boxShadow:
+            'inset 0 10px 14px -8px rgba(0,0,0,0.95), ' +
+            'inset 0 -10px 14px -8px rgba(0,0,0,0.95)',
+          ...cornerRadius,
+        }}
+      />
     </div>
   );
 }
