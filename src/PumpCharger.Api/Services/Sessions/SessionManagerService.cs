@@ -4,18 +4,18 @@ namespace PumpCharger.Api.Services.Sessions;
 
 public class SessionManagerService : BackgroundService
 {
-    private readonly HpwcVitalsChannel _channel;
+    private readonly VitalsBus _bus;
     private readonly SessionDetector _detector;
     private readonly SessionStore _store;
     private readonly ILogger<SessionManagerService> _log;
 
     public SessionManagerService(
-        HpwcVitalsChannel channel,
+        VitalsBus bus,
         SessionDetector detector,
         SessionStore store,
         ILogger<SessionManagerService> log)
     {
-        _channel = channel;
+        _bus = bus;
         _detector = detector;
         _store = store;
         _log = log;
@@ -39,9 +39,10 @@ public class SessionManagerService : BackgroundService
             _log.LogError(ex, "Failed to recover in-progress session on startup.");
         }
 
+        var reader = _bus.Subscribe();
         try
         {
-            await foreach (var timed in _channel.Reader.ReadAllAsync(stoppingToken))
+            await foreach (var timed in reader.ReadAllAsync(stoppingToken))
             {
                 try
                 {

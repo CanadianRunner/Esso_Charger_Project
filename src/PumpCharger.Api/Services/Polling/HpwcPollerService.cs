@@ -7,7 +7,7 @@ namespace PumpCharger.Api.Services.Polling;
 public class HpwcPollerService : BackgroundService
 {
     private readonly IHpwcClient _hpwc;
-    private readonly HpwcVitalsChannel _channel;
+    private readonly VitalsBus _bus;
     private readonly IOptionsMonitor<HpwcOptions> _options;
     private readonly ILogger<HpwcPollerService> _log;
 
@@ -15,12 +15,12 @@ public class HpwcPollerService : BackgroundService
 
     public HpwcPollerService(
         IHpwcClient hpwc,
-        HpwcVitalsChannel channel,
+        VitalsBus bus,
         IOptionsMonitor<HpwcOptions> options,
         ILogger<HpwcPollerService> log)
     {
         _hpwc = hpwc;
-        _channel = channel;
+        _bus = bus;
         _options = options;
         _log = log;
     }
@@ -42,7 +42,7 @@ public class HpwcPollerService : BackgroundService
                 _consecutiveFailures = 0;
 
                 active = vitals.VehicleConnected;
-                await _channel.Writer.WriteAsync(new TimedVitals(DateTime.UtcNow, vitals), stoppingToken);
+                await _bus.PublishAsync(new TimedVitals(DateTime.UtcNow, vitals), stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

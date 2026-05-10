@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using PumpCharger.Api.Config;
 using PumpCharger.Api.Data;
 using PumpCharger.Api.Extensions;
+using PumpCharger.Api.Hubs;
+using PumpCharger.Api.Services.Display;
 using PumpCharger.Api.Services.Polling;
 using PumpCharger.Api.Services.Rate;
 using PumpCharger.Api.Services.Sessions;
@@ -56,12 +58,15 @@ builder.Services.AddExternalClients(builder.Configuration);
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<ICurrentRateProvider, SettingsRateProvider>();
 
-builder.Services.AddSingleton<HpwcVitalsChannel>();
+builder.Services.AddSingleton<VitalsBus>();
 builder.Services.AddSingleton<SessionDetector>();
 builder.Services.AddSingleton<SessionStore>();
+builder.Services.AddScoped<PumpStateBuilder>();
 builder.Services.AddHostedService<HpwcPollerService>();
 builder.Services.AddHostedService<SessionManagerService>();
+builder.Services.AddHostedService<DisplayBroadcastService>();
 
+builder.Services.AddSignalR();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -86,6 +91,7 @@ if (app.Environment.IsDevelopment())
 app.UseSerilogRequestLogging();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<PumpHub>("/hubs/pump");
 
 app.Run();
 

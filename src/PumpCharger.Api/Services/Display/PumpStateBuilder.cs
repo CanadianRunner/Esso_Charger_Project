@@ -1,0 +1,89 @@
+using Microsoft.EntityFrameworkCore;
+using PumpCharger.Api.Data;
+using PumpCharger.Api.Services.Settings;
+using PumpCharger.Core.Display;
+using PumpCharger.Core.External.Models;
+using PumpCharger.Core.Settings;
+
+namespace PumpCharger.Api.Services.Display;
+
+public class PumpStateBuilder
+{
+    private readonly AppDbContext _db;
+    private readonly ISettingsService _settings;
+
+    public PumpStateBuilder(AppDbContext db, ISettingsService settings)
+    {
+        _db = db;
+        _settings = settings;
+    }
+
+    public async Task<PumpState> BuildAsync(
+        HpwcVitals vitals,
+        HpwcLifetime lifetime,
+        DateTime nowUtc,
+        bool hpwcConnected,
+        bool shellyConnected,
+        CancellationToken ct = default)
+    {
+        var state = DisplayStateRules.From(vitals);
+
+        var lifetimeOffset = await _settings.GetLongAsync(SettingKeys.LifetimeOffsetWh, 0, ct);
+        var rateCents = await _settings.GetIntAsync(SettingKeys.RateFlatCentsPerKwh, 13, ct);
+        var rateSource = await _settings.GetAsync(SettingKeys.RateSource, ct) ?? RateSourceValues.Manual;
+
+        var ytdStart = new DateTime(nowUtc.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var ytdWh = await _db.Sessions
+            .Where(s => s.EndedAt != null && s.StartedAt >= ytdStart)
+            .SumAsync(s => (long?)s.EnergyWh, ct) ?? 0;
+
+        var sessionCount = await _db.Sessions
+            .Where(s => s.EndedAt != null)
+            .CountAsync(ct);
+
+        var active = await _db.Sessions
+            .AsNoTracking()
+            .Where(s => s.EndedAt == null)
+            .OrderByDescending(s => s.StartedAt)
+            .FirstOrDefaultAsync(ct);
+
+        PumpStateSession? sessionPayload = null;
+        if (active is not null)
+        {
+            // Active session row holds energy from prior merged segments; vitals carries
+            // the current physical connection's accumulation. Sum gives the live display value.
+            var displayedWh = active.EnergyWh + (long)vitals.SessionEnergyWh;
+            var costCents = displayedWh * active.RateAtStartCentsPerKwh / 1_000;
+
+            sessionPayload = new PumpStateSession
+            {
+                EnergyKwh = displayedWh / 1000.0,
+                DurationSeconds = (long)(nowUtc - active.StartedAt).TotalSeconds,
+                CostCents = costCents,
+                LiveKw = vitals.LiveKw
+            };
+        }
+
+        return new PumpState
+        {
+            State = state.ToWire(),
+            Session = sessionPayload,
+            Totals = new PumpStateTotals
+            {
+                LifetimeKwh = (lifetime.EnergyWh + lifetimeOffset) / 1000.0,
+                YearToDateKwh = ytdWh / 1000.0,
+                SessionCount = sessionCount
+            },
+            Rate = new PumpStateRate { CentsPerKwh = rateCents },
+            ServerTime = nowUtc.ToString("o"),
+            Health = new PumpStateHealth
+            {
+                HpwcConnected = hpwcConnected,
+                ShellyConnected = shellyConnected,
+                RateSource = rateSource,
+                RateLastUpdated = nowUtc.ToString("o")
+            }
+        };
+    }
+}
