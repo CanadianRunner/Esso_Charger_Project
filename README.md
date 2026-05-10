@@ -25,6 +25,21 @@ I plan to update this README with images and my progress as I tackle the unfores
 
 ![RestoredPump](images/starter_pump.png)
 
+## Update #4 (05/09/2026)
+
+_Phase 3 is complete -- session detection:_  the app now turns the live HPWC vitals stream into proper Session rows in the database.  A session is defined as a continuous window where the vehicle is connected -- contactor cycling during charging (the car waking up to top up its battery thermal management) does not split the session, which matches how a real EV charging session actually behaves.
+
+I split the work into three layers so each piece could be tested on its own.  A pure `SessionDetector` class watches the vitals stream and emits Open / Close / None events with no database knowledge at all.  A `SessionStore` handles the database side -- creating the row on Open with the current rate snapshotted in, finalizing energy and cost on Close, and merging an unplug-then-replug back into the prior session if it happened inside the configurable grace window (default 60 seconds).  A `SessionManagerService` background service glues the two together off a `Channel<T>` published by a new `HpwcPollerService` that polls adaptively -- 1 second when a session is active, 5 seconds when idle, and backs off to 30 seconds after three consecutive failures.
+
+A few things worth calling out:
+
+* **Rate is snapshotted at session start**, so editing the rate mid-session doesn't retroactively change historical cost calculations.
+* **Reboot recovery** -- if the Pi loses power mid-charge, on next startup the manager scans the database for any session left with a null `EndedAt`, adopts it, and continues tracking from where it left off.
+* I noticed the spec had a typo on the cost formula (`/100000` instead of `/1000`), so I corrected it -- a 2.238 kWh session at 13¢/kWh now lands at the correct 29¢ instead of evaluating to a single cent.
+* I also added a `SettingsService` with default seeding for the rate, merge grace window, idle threshold, lifetime offset, and display rotation interval.  Every setting change writes a row to the audit log.
+
+End-to-end I drove a full charging cycle through the demo controls and watched the session row open, fill in, close, then merge with a follow-up replug -- exactly as designed.  Test count is up to 49 and CI is green.
+
 ## Update #3 (05/05/2026)
 
 _Phase 2 is complete -- fake-first external clients:_  every external integration (HPWC, Shelly, OpenEI) now sits behind an interface in `PumpCharger.Core` with both a real-stub and a fake implementation chosen at startup by a config flag.  In dev mode the app boots into Fake mode automatically and runs entirely on simulated data, so I can build and demo the whole pump display before any hardware is installed.
