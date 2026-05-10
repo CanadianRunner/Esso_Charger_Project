@@ -32,19 +32,28 @@ export default function OdometerDial({
   // We render one cell per character: digits → OdometerDigit, '.' → static dot.
 
   const lastIndex = formatted.length - 1;
+  const dotIndex = formatted.indexOf('.');
+  // Any digit cell to the right of the decimal point is a decimal-position drum.
+  // On a D-capped dial those drums shrink to ~70% (period-correct: real pump
+  // decimal drums were physically smaller than integer drums). The rightmost
+  // also gets the red pointer arrow.
+  const decimalsShouldShrink = decimals > 0 && hasDCap;
 
   return (
-    <div className="flex items-stretch gap-0.5 font-odometer">
+    <div className="flex items-stretch font-odometer">
       {formatted.split('').map((ch, i) => {
+        const isLast = i === lastIndex;
         if (ch === '.') {
           return (
             <DecimalCell
               key={`dot-${i}`}
               digitHeight={digitHeight}
               fontSize={decimalSize}
+              showRightSeam={!isLast}
             />
           );
         }
+        const isDecimalPosition = dotIndex !== -1 && i > dotIndex;
         return (
           <OdometerDigit
             key={`d-${i}`}
@@ -52,7 +61,10 @@ export default function OdometerDial({
             digitHeight={digitHeight}
             digitWidth={digitWidth}
             fontSize={fontSize}
-            hasDCap={hasDCap && i === lastIndex}
+            hasDCap={hasDCap && isLast}
+            shrunkenDigit={decimalsShouldShrink && isDecimalPosition}
+            showArrow={decimalsShouldShrink && isLast}
+            showRightSeam={!isLast}
           />
         );
       })}
@@ -60,12 +72,26 @@ export default function OdometerDial({
   );
 }
 
-function DecimalCell({ digitHeight, fontSize }: { digitHeight: number; fontSize: number }) {
+function DecimalCell({
+  digitHeight,
+  fontSize,
+  showRightSeam = false,
+}: {
+  digitHeight: number;
+  fontSize: number;
+  showRightSeam?: boolean;
+}) {
   const windowHeight = Math.round(digitHeight * 1.4);
   return (
     <div
-      className="flex items-end justify-center bg-black text-white font-black select-none"
-      style={{ height: windowHeight, width: Math.round(fontSize * 0.6), paddingBottom: digitHeight * 0.15, fontSize }}
+      className="flex items-end justify-center bg-black text-white font-black select-none box-border"
+      style={{
+        height: windowHeight,
+        width: Math.round(fontSize * 0.6),
+        paddingBottom: digitHeight * 0.15,
+        fontSize,
+        borderRight: showRightSeam ? '1px solid #050403' : undefined,
+      }}
     >
       .
     </div>
