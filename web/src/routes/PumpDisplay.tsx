@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { startPumpHub } from '../lib/pumpHubClient';
 import { usePumpStore } from '../stores/pumpStore';
 import { useStaleData } from '../hooks/useStaleData';
+import { OdometerDial } from '../components/dials';
 
 export default function PumpDisplay() {
   const state = usePumpStore((s) => s.state);
@@ -15,6 +16,10 @@ export default function PumpDisplay() {
 
   const showWarning = isStale || connection === 'disconnected';
 
+  const sessionDollars = (state?.session?.costCents ?? 0) / 100;
+  const sessionKwh = state?.session?.energyKwh ?? 0;
+  const ratePerKwh = (state?.rate.centsPerKwh ?? 0) / 100;
+
   return (
     <div className="bg-black text-white w-[768px] h-[1024px] mx-auto relative font-mono">
       {showWarning && (
@@ -24,7 +29,11 @@ export default function PumpDisplay() {
       )}
 
       <Zone label="THIS $ SALE">
-        <PlaceholderDigits value={dollarsFromCents(state?.session?.costCents ?? 0)} size="large" />
+        <div className="flex items-center gap-3">
+          <FlankLabel>$</FlankLabel>
+          <OdometerDial value={sessionDollars} digits={2} decimals={2} size="large" hasDCap />
+          <FlankLabel>SALE</FlankLabel>
+        </div>
       </Zone>
 
       <Zone label="USAGE">
@@ -45,11 +54,14 @@ export default function PumpDisplay() {
       </Zone>
 
       <Zone label="kWh DELIVERED">
-        <PlaceholderDigits value={(state?.session?.energyKwh ?? 0).toFixed(1)} size="large" />
+        <OdometerDial value={sessionKwh} digits={3} decimals={1} size="large" hasDCap />
       </Zone>
 
       <Zone label="PRICE PER kWh">
-        <PlaceholderDigits value={`$${(((state?.rate.centsPerKwh ?? 0) / 100)).toFixed(2)}`} size="small" />
+        <div className="flex items-center gap-2">
+          <FlankLabel small>$</FlankLabel>
+          <OdometerDial value={ratePerKwh} digits={1} decimals={2} size="small" />
+        </div>
       </Zone>
 
       <div className="absolute bottom-2 left-2 text-xs text-neutral-500">
@@ -63,14 +75,21 @@ function Zone({ label, children }: { label: string; children: React.ReactNode })
   return (
     <div className="px-12 py-4 border-b border-neutral-900">
       <div className="text-neutral-500 text-xs uppercase tracking-widest">{label}</div>
-      <div className="mt-1">{children}</div>
+      <div className="mt-2 flex items-center justify-center">{children}</div>
     </div>
   );
 }
 
-function PlaceholderDigits({ value, size }: { value: string; size: 'small' | 'large' }) {
-  const cls = size === 'large' ? 'text-7xl' : 'text-3xl';
-  return <div className={`${cls} font-bold tabular-nums`}>{value}</div>;
+function FlankLabel({ children, small = false }: { children: React.ReactNode; small?: boolean }) {
+  // The "$" / "SALE" wording lives on the physical pump faceplate as vinyl
+  // stickers; the kiosk only renders values inside the cutouts. Until we wire
+  // the preview-mode URL toggle, render them inline so the layout reads.
+  const sizeCls = small ? 'text-3xl' : 'text-5xl';
+  return (
+    <span className={`font-odometer font-black ${sizeCls}`} style={{ color: '#f8f3e1' }}>
+      {children}
+    </span>
+  );
 }
 
 function SmallReadout({ value, icon }: { value: string; icon: string }) {
@@ -80,9 +99,4 @@ function SmallReadout({ value, icon }: { value: string; icon: string }) {
       <span>{value}</span>
     </div>
   );
-}
-
-function dollarsFromCents(cents: number): string {
-  const dollars = cents / 100;
-  return `$${dollars.toFixed(2)}`;
 }

@@ -40,7 +40,7 @@ describe('PumpDisplay', () => {
     expect(screen.getByText('PRICE PER kWh')).toBeInTheDocument();
   });
 
-  it('reflects live charging values from the store', () => {
+  it('reflects live mini-readout values from the store', () => {
     render(<PumpDisplay />);
 
     act(() => {
@@ -54,11 +54,11 @@ describe('PumpDisplay', () => {
       });
     });
 
-    expect(screen.getByText('$1.60')).toBeInTheDocument();         // session cost
-    expect(screen.getByText('12.3')).toBeInTheDocument();           // session kWh
-    expect(screen.getByText('1234.5 kWh')).toBeInTheDocument();     // lifetime usage readout
-    expect(screen.getByText('11.5 kW')).toBeInTheDocument();        // live kW pinned
-    expect(screen.getByText('$0.13')).toBeInTheDocument();          // price per kWh
+    // OdometerDial-rendered values (Zone 1 cost, Zone 4 kWh, Zone 5 rate) are
+    // split across digit cells; their rendering is covered in OdometerDial.test.tsx.
+    // Here we assert the non-dial readouts that remain plain text.
+    expect(screen.getByText('1234.5 kWh')).toBeInTheDocument();     // Zone 2 USAGE
+    expect(screen.getByText('11.5 kW')).toBeInTheDocument();        // Zone 3 SESSION live kW
   });
 
   it('shows reconnecting badge when disconnected', () => {
