@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using PumpCharger.Api.Config;
 using PumpCharger.Api.Data;
 using PumpCharger.Api.Extensions;
+using PumpCharger.Api.Services.Rate;
+using PumpCharger.Api.Services.Settings;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -49,6 +51,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddExternalClients(builder.Configuration);
 
+builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddScoped<ICurrentRateProvider, SettingsRateProvider>();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -59,6 +64,9 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+
+    var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
+    await settings.SeedDefaultsAsync();
 }
 
 if (app.Environment.IsDevelopment())
