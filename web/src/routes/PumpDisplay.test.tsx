@@ -40,7 +40,7 @@ describe('PumpDisplay', () => {
     expect(screen.getByText('PRICE PER kWh')).toBeInTheDocument();
   });
 
-  it('reflects live mini-readout values from the store', () => {
+  it('reflects live mini-readout icons and units from the store', () => {
     render(<PumpDisplay />);
 
     act(() => {
@@ -54,11 +54,15 @@ describe('PumpDisplay', () => {
       });
     });
 
-    // OdometerDial-rendered values (Zone 1 cost, Zone 4 kWh, Zone 5 rate) are
-    // split across digit cells; their rendering is covered in OdometerDial.test.tsx.
-    // Here we assert the non-dial readouts that remain plain text.
-    expect(screen.getByText('1234.5 kWh')).toBeInTheDocument();     // Zone 2 USAGE
-    expect(screen.getByText('11.5 kW')).toBeInTheDocument();        // Zone 3 SESSION live kW
+    // OdometerDial- and MiniReadout-rendered values are split across individual
+    // cells; per-component rendering is covered in their own test files. Here
+    // we assert the icons and unit labels that uniquely identify each zone is
+    // wired correctly. Icons appear twice per readout because RollingCell
+    // renders both rows of its two-row reel on every render.
+    expect(screen.getAllByText('📊').length).toBeGreaterThan(0);   // Zone 2 USAGE icon (rotation 0)
+    expect(screen.getByText('kWh')).toBeInTheDocument();           // Zone 2 unit
+    expect(screen.getAllByText('⚡').length).toBeGreaterThan(0);    // Zone 3 SESSION icon (pinned charging)
+    expect(screen.getByText('kW')).toBeInTheDocument();             // Zone 3 unit
   });
 
   it('shows reconnecting badge when disconnected', () => {
@@ -69,7 +73,7 @@ describe('PumpDisplay', () => {
     expect(screen.getByText(/reconnecting/i)).toBeInTheDocument();
   });
 
-  it('shows session_complete checkmark in the SESSION slot', () => {
+  it('pins SESSION zone to ✓ Done when state is session_complete', () => {
     render(<PumpDisplay />);
     act(() => {
       usePumpStore.setState({
@@ -81,6 +85,9 @@ describe('PumpDisplay', () => {
         connection: 'connected',
       });
     });
-    expect(screen.getByText('✓ Done')).toBeInTheDocument();
+    // The checkmark is rendered in a MiniReadout cell (twice — top & bottom of reel),
+    // "Done" as the unit label.
+    expect(screen.getAllByText('✓').length).toBeGreaterThan(0);
+    expect(screen.getByText('Done')).toBeInTheDocument();
   });
 });

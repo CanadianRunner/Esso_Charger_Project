@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { OdometerDial } from '../components/dials';
+import KioskFrame from '../components/shared/KioskFrame';
 
 export default function DialsPreview() {
   const [animated, setAnimated] = useState(0);
@@ -16,7 +17,8 @@ export default function DialsPreview() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100 p-10 space-y-12">
+    <KioskFrame>
+    <main className="bg-neutral-950 text-neutral-100 p-10 space-y-12 h-full overflow-y-auto">
       <header>
         <h1 className="text-3xl font-semibold">Odometer Dial Preview</h1>
         <p className="text-neutral-400 mt-1">Static and animated samples for visual review.</p>
@@ -61,6 +63,7 @@ export default function DialsPreview() {
         <OdometerDial value={wrapDemo} digits={1} decimals={0} size="large" />
       </Section>
     </main>
+    </KioskFrame>
   );
 }
 

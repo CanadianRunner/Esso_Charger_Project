@@ -2,7 +2,17 @@ import { useEffect } from 'react';
 import { startPumpHub } from '../lib/pumpHubClient';
 import { usePumpStore } from '../stores/pumpStore';
 import { useStaleData } from '../hooks/useStaleData';
-import { OdometerDial } from '../components/dials';
+import { useRotatingIndex } from '../hooks/useRotatingIndex';
+import { OdometerDial, MiniReadout } from '../components/dials';
+import type { MiniReadoutProps } from '../components/dials';
+import KioskFrame from '../components/shared/KioskFrame';
+import type { PumpState } from '../types/PumpState';
+import {
+  formatDecimal,
+  formatInteger,
+  formatDuration,
+  READOUT_DONE,
+} from '../lib/displayFormat';
 
 export default function PumpDisplay() {
   const state = usePumpStore((s) => s.state);
@@ -20,7 +30,18 @@ export default function PumpDisplay() {
   const sessionKwh = state?.session?.energyKwh ?? 0;
   const ratePerKwh = (state?.rate.centsPerKwh ?? 0) / 100;
 
+  // Zone 2 (USAGE) — always rotates between lifetime / YTD / session count.
+  const usageRotations = buildUsageRotations(state);
+  const usageIndex = useRotatingIndex(usageRotations.length);
+  const usage = usageRotations[usageIndex];
+
+  // Zone 3 (SESSION) — pinned during plugged/charging/complete, rotates when idle.
+  const sessionRotations = buildSessionRotations(state);
+  const sessionIndex = useRotatingIndex(sessionRotations.length);
+  const session = sessionRotations[sessionIndex];
+
   return (
+    <KioskFrame>
     <div className="bg-black text-white w-[768px] h-[1024px] mx-auto relative font-mono">
       {showWarning && (
         <div className="absolute top-2 right-2 text-xs bg-yellow-500 text-black px-2 py-1 rounded">
@@ -37,20 +58,11 @@ export default function PumpDisplay() {
       </Zone>
 
       <Zone label="USAGE">
-        <SmallReadout value={`${(state?.totals.lifetimeKwh ?? 0).toFixed(1)} kWh`} icon="📊" />
+        <MiniReadout icon={usage.icon} value={usage.value} unit={usage.unit} />
       </Zone>
 
       <Zone label="SESSION">
-        <SmallReadout
-          value={
-            state?.state === 'charging'
-              ? `${(state?.session?.liveKw ?? 0).toFixed(1)} kW`
-              : state?.state === 'session_complete'
-              ? '✓ Done'
-              : `${(state?.session?.liveKw ?? 0).toFixed(1)} kW`
-          }
-          icon="⚡"
-        />
+        <MiniReadout icon={session.icon} value={session.value} unit={session.unit} />
       </Zone>
 
       <Zone label="kWh DELIVERED">
@@ -68,7 +80,39 @@ export default function PumpDisplay() {
         state: {state?.state ?? '—'} · conn: {connection}
       </div>
     </div>
+    </KioskFrame>
   );
+}
+
+function buildUsageRotations(state: PumpState | null): MiniReadoutProps[] {
+  const totals = state?.totals;
+  return [
+    { icon: '📊', value: formatDecimal(totals?.lifetimeKwh ?? 0), unit: 'kWh' },
+    { icon: '🗓️', value: formatDecimal(totals?.yearToDateKwh ?? 0), unit: 'kWh YTD' },
+    { icon: '🔢', value: formatInteger(totals?.sessionCount ?? 0), unit: 'sessions' },
+  ];
+}
+
+function buildSessionRotations(state: PumpState | null): MiniReadoutProps[] {
+  const liveKw = state?.session?.liveKw ?? 0;
+  const sessionKwh = state?.session?.energyKwh ?? 0;
+  const durationSeconds = state?.session?.durationSeconds ?? 0;
+
+  switch (state?.state) {
+    case 'charging':
+      return [{ icon: '⚡', value: formatDecimal(liveKw), unit: 'kW' }];
+    case 'session_complete':
+      return [{ icon: '⚡', value: READOUT_DONE, unit: 'Done' }];
+    case 'plugged_not_charging':
+      return [{ icon: '⚡', value: formatDecimal(0), unit: 'kW' }];
+    case 'idle':
+    default:
+      // Rotate between duration and kWh added — skip live kW since it'd be 0.
+      return [
+        { icon: '⏱️', value: formatDuration(durationSeconds), unit: '' },
+        { icon: '🔋', value: formatDecimal(sessionKwh), unit: 'kWh' },
+      ];
+  }
 }
 
 function Zone({ label, children }: { label: string; children: React.ReactNode }) {
@@ -89,14 +133,5 @@ function FlankLabel({ children, small = false }: { children: React.ReactNode; sm
     <span className={`font-odometer font-black ${sizeCls}`} style={{ color: '#f8f3e1' }}>
       {children}
     </span>
-  );
-}
-
-function SmallReadout({ value, icon }: { value: string; icon: string }) {
-  return (
-    <div className="flex items-center gap-2 text-xl tabular-nums">
-      <span>{icon}</span>
-      <span>{value}</span>
-    </div>
   );
 }
