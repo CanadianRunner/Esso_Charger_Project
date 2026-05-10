@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Home from './routes/Home';
 import PumpDisplay from './routes/PumpDisplay';
 import AdminPlaceholder from './routes/AdminPlaceholder';
+import DialsPreview from './routes/DialsPreview';
 
 export default function App() {
   return (
@@ -10,6 +11,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/pump" element={<PumpDisplay />} />
         <Route path="/admin/*" element={<AdminPlaceholder />} />
+        <Route path="/dev/dials" element={<DialsPreview />} />
       </Routes>
     </BrowserRouter>
   );

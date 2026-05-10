@@ -18,6 +18,10 @@ export default function Home() {
             <div className="font-mono">/admin</div>
             <div className="text-sm text-neutral-400">Admin (placeholder)</div>
           </Link>
+          <Link to="/dev/dials" className="rounded border border-neutral-800 bg-neutral-900 p-4 hover:border-neutral-700">
+            <div className="font-mono">/dev/dials</div>
+            <div className="text-sm text-neutral-400">Odometer dial preview</div>
+          </Link>
         </nav>
       </div>
     </main>
