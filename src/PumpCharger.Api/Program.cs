@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using PumpCharger.Api.Config;
 using PumpCharger.Api.Data;
 using PumpCharger.Api.Extensions;
+using PumpCharger.Api.Services.Polling;
 using PumpCharger.Api.Services.Rate;
+using PumpCharger.Api.Services.Sessions;
 using PumpCharger.Api.Services.Settings;
 using Serilog;
 
@@ -53,6 +55,12 @@ builder.Services.AddExternalClients(builder.Configuration);
 
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<ICurrentRateProvider, SettingsRateProvider>();
+
+builder.Services.AddSingleton<HpwcVitalsChannel>();
+builder.Services.AddSingleton<SessionDetector>();
+builder.Services.AddSingleton<SessionStore>();
+builder.Services.AddHostedService<HpwcPollerService>();
+builder.Services.AddHostedService<SessionManagerService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
