@@ -25,6 +25,19 @@ I plan to update this README with images and my progress as I tackle the unfores
 
 ![RestoredPump](images/starter_pump.png)
 
+## Update #5 (05/09/2026)
+
+_Phase 4 is complete -- live data flowing end-to-end:_  the backend now publishes a `pumpState` payload over a SignalR WebSocket hub at `/hubs/pump`, and the frontend kiosk view at `/pump` subscribes to it and renders the live state in a 768x1024 portrait layout that matches the eventual faceplate cutouts.  The visuals are intentionally placeholder for now -- chunky monospace digits, no animation -- because Phase 5 is where the actual mechanical-odometer dials get built.  The point of this phase was to prove the wiring, not to polish the look.
+
+A few architectural pieces had to land for this to work:
+
+* **Multi-subscriber `VitalsBus`**.  The session manager and the new display broadcaster both need the same vitals stream, so the single-channel pattern from Phase 3 got replaced with a tiny fanout bus that hands each subscriber its own bounded channel.
+* **`PumpStateBuilder`** turns the latest vitals plus the database state into the wire-shape the frontend expects -- display state derived from the four-state rule in the spec, active session payload combining the persisted prior segments with the live in-flight energy, year-to-date kWh, all-time session count, lifetime kWh including the configurable offset.
+* **`DisplayBroadcastService`** subscribes to the vitals bus and pushes a fresh payload on every tick (which is naturally 1 second when active and 5 seconds when idle, matching the spec's cadence requirement).  It caches the slow-moving HPWC lifetime call to refresh every 30 seconds rather than once per push.
+* **Frontend store** is a small Zustand singleton plus a hook that flips the in-page `⚠ reconnecting` badge if no SignalR message arrives for 15 seconds.
+
+End-to-end I confirmed the pipeline by writing a tiny Node SignalR probe that connected to the hub, received five live `pumpState` messages while the simulator was charging, and watched session energy tick from 0.083 -> 0.097 -> 0.111 -> 0.125 kWh in real time.  Test count is up to 63 (59 backend + 4 frontend) and CI now also runs the frontend tests.
+
 ## Update #4 (05/09/2026)
 
 _Phase 3 is complete -- session detection:_  the app now turns the live HPWC vitals stream into proper Session rows in the database.  A session is defined as a continuous window where the vehicle is connected -- contactor cycling during charging (the car waking up to top up its battery thermal management) does not split the session, which matches how a real EV charging session actually behaves.
