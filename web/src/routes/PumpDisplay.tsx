@@ -5,6 +5,8 @@ import { useStaleData } from '../hooks/useStaleData';
 import { useRotatingIndex } from '../hooks/useRotatingIndex';
 import { useBrightness } from '../hooks/useBrightness';
 import { usePreviewMode } from '../hooks/usePreviewMode';
+import { usePixelShifter } from '../hooks/usePixelShifter';
+import { useDialExercise, EXERCISE_MULTIPLIERS } from '../hooks/useDialExercise';
 import { OdometerDial, MiniReadout } from '../components/dials';
 import type { MiniReadoutProps } from '../components/dials';
 import KioskFrame from '../components/shared/KioskFrame';
@@ -23,6 +25,8 @@ export default function PumpDisplay() {
   const isStale = useStaleData(receivedAt);
   const previewMode = usePreviewMode();
   const brightness = useBrightness(state?.state);
+  const pixelShift = usePixelShifter();
+  const exerciseStep = useDialExercise(state?.state);
 
   useEffect(() => {
     startPumpHub();
@@ -30,9 +34,21 @@ export default function PumpDisplay() {
 
   const showWarning = isStale || connection === 'disconnected';
 
-  const sessionDollars = (state?.session?.costCents ?? 0) / 100;
-  const sessionKwh = state?.session?.energyKwh ?? 0;
-  const ratePerKwh = (state?.rate.centsPerKwh ?? 0) / 100;
+  const actualDollars = (state?.session?.costCents ?? 0) / 100;
+  const actualKwh = state?.session?.energyKwh ?? 0;
+  const actualRate = (state?.rate.centsPerKwh ?? 0) / 100;
+
+  // During the dial-exercise hour-tick, override each dial's value with a
+  // per-dial multiple of the step so every cell rolls through every digit.
+  const sessionDollars = exerciseStep !== null
+    ? exerciseStep * EXERCISE_MULTIPLIERS.zone1Dollars
+    : actualDollars;
+  const sessionKwh = exerciseStep !== null
+    ? exerciseStep * EXERCISE_MULTIPLIERS.zone4Kwh
+    : actualKwh;
+  const ratePerKwh = exerciseStep !== null
+    ? exerciseStep * EXERCISE_MULTIPLIERS.zone5Rate
+    : actualRate;
 
   const usageRotations = buildUsageRotations(state);
   const usageIndex = useRotatingIndex(usageRotations.length);
@@ -46,7 +62,11 @@ export default function PumpDisplay() {
     <KioskFrame>
     <div
       className="bg-black text-white w-[768px] h-[1024px] mx-auto relative font-mono"
-      style={{ filter: `brightness(${brightness})`, transition: 'filter 1.2s ease-in-out' }}
+      style={{
+        filter: `brightness(${brightness})`,
+        transform: `translate(${pixelShift.x}px, ${pixelShift.y}px)`,
+        transition: 'filter 1.2s ease-in-out, transform 200ms ease-in-out',
+      }}
     >
       {showWarning && (
         <div className="absolute top-2 right-2 text-xs bg-yellow-500 text-black px-2 py-1 rounded">
