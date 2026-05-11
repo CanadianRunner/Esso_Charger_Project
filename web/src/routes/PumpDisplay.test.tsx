@@ -29,15 +29,25 @@ function buildState(overrides: Partial<PumpState> = {}): PumpState {
 describe('PumpDisplay', () => {
   beforeEach(() => {
     usePumpStore.setState({ state: null, receivedAt: null, connection: 'connecting' });
+    // Default to no preview mode unless a test overrides it.
+    window.history.replaceState({}, '', '/');
   });
 
-  it('renders the five zone labels even with no data', () => {
+  it('renders the five zone labels in preview mode', () => {
+    window.history.replaceState({}, '', '/?preview=true');
     render(<PumpDisplay />);
     expect(screen.getByText('THIS $ SALE')).toBeInTheDocument();
     expect(screen.getByText('USAGE')).toBeInTheDocument();
     expect(screen.getByText('SESSION')).toBeInTheDocument();
     expect(screen.getByText('kWh DELIVERED')).toBeInTheDocument();
     expect(screen.getByText('PRICE PER kWh')).toBeInTheDocument();
+  });
+
+  it('hides zone labels by default (production-kiosk mode)', () => {
+    render(<PumpDisplay />);
+    expect(screen.queryByText('THIS $ SALE')).not.toBeInTheDocument();
+    expect(screen.queryByText('USAGE')).not.toBeInTheDocument();
+    expect(screen.queryByText('PRICE PER kWh')).not.toBeInTheDocument();
   });
 
   it('reflects live mini-readout icons and units from the store', () => {
