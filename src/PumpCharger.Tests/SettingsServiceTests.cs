@@ -98,6 +98,8 @@ public class SettingsServiceTests : IDisposable
         Assert.Equal(0.5m, await svc.GetDecimalAsync(SettingKeys.SessionIdleThresholdAmps, -1));
         Assert.Equal(0, await svc.GetLongAsync(SettingKeys.LifetimeOffsetWh, -1));
         Assert.Equal(10, await svc.GetIntAsync(SettingKeys.DisplayMiniRotationSeconds, -1));
+        Assert.Equal(300, await svc.GetIntAsync(SettingKeys.DisplayPostSessionBrightSeconds, -1));
+        Assert.Equal(600, await svc.GetIntAsync(SettingKeys.DisplayPostSessionDimSeconds, -1));
     }
 
     [Fact]

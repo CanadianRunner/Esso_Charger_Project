@@ -45,3 +45,36 @@ export function formatDuration(seconds: number): string {
 
 /** Centered checkmark with three blank cells on each side. */
 export const READOUT_DONE = '   ✓   ';
+
+/**
+ * H:MM:SS exactly 7 cells, capped at 9:59:59. Used for session-complete
+ * rotation where we want second-precision on the duration readout.
+ *   60s    → "0:01:00"
+ *   3725s  → "1:02:05"
+ */
+export function formatHmsExact(seconds: number): string {
+  const safe = Math.max(0, Math.floor(seconds));
+  const capped = Math.min(safe, 9 * 3600 + 59 * 60 + 59);
+  const h = Math.floor(capped / 3600);
+  const m = Math.floor((capped % 3600) / 60);
+  const s = capped % 60;
+  return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+/**
+ * USD cost in `dddd.dd` format, 7 cells. Input is dollars (e.g., 1.60 for $1.60).
+ * Capped at 9999.99.
+ */
+export function formatCostUsd(dollars: number): string {
+  const safe = Math.max(0, dollars);
+  const capped = Math.min(9999.99, safe);
+  return capped.toFixed(2).padStart(READOUT_CELL_COUNT, '0');
+}
+
+/**
+ * True-idle "READY" display content for cells 1..7 (cell 0 stays blank via
+ * `icon: ' '`). Seven code points: lightning + R E A D Y + plug. The plug
+ * emoji is a UTF-16 surrogate pair so MiniReadout splits with Array.from to
+ * count user-perceived characters correctly.
+ */
+export const READOUT_READY = '⚡READY🔌';

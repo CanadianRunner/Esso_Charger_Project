@@ -1,8 +1,16 @@
 import { render, screen, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import PumpDisplay from './PumpDisplay';
 import { usePumpStore } from '../stores/pumpStore';
 import type { PumpState } from '../types/PumpState';
+
+/**
+ * Helper: advance past RollingCell's 250ms roll + cellIndex × 30ms stagger
+ * (max ~460ms across the 8-cell row) so the reels have settled to the new chars.
+ */
+function settleRollAnimations() {
+  act(() => { vi.advanceTimersByTime(700); });
+}
 
 vi.mock('../lib/pumpHubClient', () => ({
   startPumpHub: vi.fn(),
@@ -28,9 +36,13 @@ function buildState(overrides: Partial<PumpState> = {}): PumpState {
 
 describe('PumpDisplay', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     usePumpStore.setState({ state: null, receivedAt: null, connection: 'connecting' });
     // Default to no preview mode unless a test overrides it.
     window.history.replaceState({}, '', '/');
+  });
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('renders the five zone labels in preview mode', () => {
@@ -83,7 +95,7 @@ describe('PumpDisplay', () => {
     expect(screen.getByText(/reconnecting/i)).toBeInTheDocument();
   });
 
-  it('pins SESSION zone to ✓ Done when state is session_complete', () => {
+  it('session_complete shows duration rotation initially (index 0 of the 4-stat cycle)', () => {
     render(<PumpDisplay />);
     act(() => {
       usePumpStore.setState({
@@ -95,9 +107,127 @@ describe('PumpDisplay', () => {
         connection: 'connected',
       });
     });
-    // The checkmark is rendered in a MiniReadout cell (twice — top & bottom of reel),
-    // "Done" as the unit label.
-    expect(screen.getAllByText('✓').length).toBeGreaterThan(0);
-    expect(screen.getByText('Done')).toBeInTheDocument();
+    // First rotation entry is the duration timer ⏱️. The other rotation icons
+    // (🔋 kWh, 💵 cost, ⚡ Done) don't appear until 10s+, 20s+, 30s+.
+    expect(screen.getAllByText('⏱️').length).toBeGreaterThan(0);
+  });
+
+  it('true idle shows the READY display (no zero-value rotation)', () => {
+    render(<PumpDisplay />);
+    act(() => {
+      usePumpStore.setState({
+        state: buildState({ state: 'idle', session: null }),
+        receivedAt: Date.now(),
+        connection: 'connected',
+      });
+    });
+    // The READY display puts ⚡ in cell 1 and 🔌 in cell 7, with R/E/A/D/Y in between.
+    expect(screen.getAllByText('R').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('E').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('A').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('D').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Y').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('🔌').length).toBeGreaterThan(0);
+  });
+
+  it('READY display does NOT appear during charging / plugged / session_complete', () => {
+    render(<PumpDisplay />);
+
+    act(() => {
+      usePumpStore.setState({
+        state: buildState({
+          state: 'charging',
+          session: { energyKwh: 1.0, durationSeconds: 60, costCents: 10, liveKw: 5 },
+        }),
+        receivedAt: Date.now(),
+        connection: 'connected',
+      });
+    });
+    settleRollAnimations();
+    expect(screen.queryByText('R')).not.toBeInTheDocument();
+    expect(screen.queryByText('🔌')).not.toBeInTheDocument();
+
+    act(() => {
+      usePumpStore.setState({
+        state: buildState({
+          state: 'plugged_not_charging',
+          session: { energyKwh: 0, durationSeconds: 5, costCents: 0, liveKw: 0 },
+        }),
+        receivedAt: Date.now(),
+        connection: 'connected',
+      });
+    });
+    settleRollAnimations();
+    expect(screen.queryByText('R')).not.toBeInTheDocument();
+
+    act(() => {
+      usePumpStore.setState({
+        state: buildState({
+          state: 'session_complete',
+          session: { energyKwh: 5.0, durationSeconds: 1800, costCents: 65, liveKw: 0 },
+        }),
+        receivedAt: Date.now(),
+        connection: 'connected',
+      });
+    });
+    settleRollAnimations();
+    expect(screen.queryByText('R')).not.toBeInTheDocument();
+  });
+
+  it('charging → idle does NOT immediately show READY (linger holds the session for 15 min)', () => {
+    render(<PumpDisplay />);
+
+    // Walk through charging then unplug.
+    act(() => {
+      usePumpStore.setState({
+        state: buildState({
+          state: 'charging',
+          session: { energyKwh: 5.0, durationSeconds: 1800, costCents: 65, liveKw: 10 },
+        }),
+        receivedAt: Date.now(),
+        connection: 'connected',
+      });
+    });
+    act(() => {
+      usePumpStore.setState({
+        state: buildState({ state: 'idle', session: null }),
+        receivedAt: Date.now(),
+        connection: 'connected',
+      });
+    });
+
+    // During the linger window the display is synthesized as session_complete,
+    // so it's still showing session stats — not READY.
+    settleRollAnimations();
+    expect(screen.queryByText('R')).not.toBeInTheDocument();
+    expect(screen.getAllByText('⏱️').length).toBeGreaterThan(0);
+  });
+
+  it('idle → plugged_not_charging during READY swaps in the kW readout', () => {
+    render(<PumpDisplay />);
+    act(() => {
+      usePumpStore.setState({
+        state: buildState({ state: 'idle', session: null }),
+        receivedAt: Date.now(),
+        connection: 'connected',
+      });
+    });
+    expect(screen.getAllByText('R').length).toBeGreaterThan(0);
+
+    act(() => {
+      usePumpStore.setState({
+        state: buildState({
+          state: 'plugged_not_charging',
+          session: { energyKwh: 0, durationSeconds: 0, costCents: 0, liveKw: 0 },
+        }),
+        receivedAt: Date.now(),
+        connection: 'connected',
+      });
+    });
+    // READY letters gone, kW unit appears.
+    settleRollAnimations();
+    expect(screen.queryByText('R')).not.toBeInTheDocument();
+    expect(screen.queryByText('🔌')).not.toBeInTheDocument();
+    expect(screen.getByText('kW')).toBeInTheDocument();
   });
 });

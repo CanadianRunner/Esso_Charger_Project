@@ -52,6 +52,18 @@ describe('useDialExercise', () => {
     expect(result.current).toBe(2);
   });
 
+  it('does not auto-fire when suspended (post-session linger)', () => {
+    const { result } = renderHook(() => useDialExercise('idle', /*suspended*/ true));
+    act(() => { vi.advanceTimersByTime(61 * 60_000); });
+    expect(result.current).toBeNull();
+  });
+
+  it('does not force-fire from ?exercise=now when suspended', () => {
+    window.history.replaceState({}, '', '/?exercise=now');
+    const { result } = renderHook(() => useDialExercise('idle', /*suspended*/ true));
+    expect(result.current).toBeNull();
+  });
+
   it('multipliers map step 9 to all-9s in each dial format', () => {
     // Zone 1: 9 * 11.11 = 99.99 (digits=2 decimals=2 → "99.99")
     expect(9 * EXERCISE_MULTIPLIERS.zone1Dollars).toBeCloseTo(99.99);

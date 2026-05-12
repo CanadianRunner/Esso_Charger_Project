@@ -13,8 +13,15 @@ const CHECK_INTERVAL_MS = 60_000;
  * the same digit for a long idle period.
  *
  * Returns the current exercise step (0..9) or null when not exercising.
+ *
+ * Pass `suspended=true` (e.g., during a post-session linger window) to prevent
+ * both the auto-fire and the URL force-trigger from running. The lingering
+ * just-completed session data takes priority over the exercise tick.
  */
-export function useDialExercise(state: DisplayState | undefined): number | null {
+export function useDialExercise(
+  state: DisplayState | undefined,
+  suspended: boolean = false
+): number | null {
   const [step, setStep] = useState<number | null>(null);
   const lastExerciseAtRef = useRef(0);
   const runningRef = useRef(false);
@@ -43,12 +50,14 @@ export function useDialExercise(state: DisplayState | undefined): number | null 
   // Force-trigger via ?exercise=now on mount.
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (suspended) return;
     const force = new URLSearchParams(window.location.search).get('exercise') === 'now';
     if (force) runExercise();
-  }, [runExercise]);
+  }, [runExercise, suspended]);
 
   // Hourly check while idle.
   useEffect(() => {
+    if (suspended) return;
     if (state !== 'idle') return;
     const id = window.setInterval(() => {
       if (Date.now() - lastExerciseAtRef.current >= HOUR_MS) {
@@ -56,7 +65,7 @@ export function useDialExercise(state: DisplayState | undefined): number | null 
       }
     }, CHECK_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [state, runExercise]);
+  }, [state, runExercise, suspended]);
 
   // Cleanup any in-flight step timer on unmount.
   useEffect(() => {

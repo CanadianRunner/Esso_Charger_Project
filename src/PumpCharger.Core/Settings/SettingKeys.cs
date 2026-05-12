@@ -16,6 +16,8 @@ public static class SettingKeys
     public const string LifetimeOffsetWh = "lifetime.offset_wh";  // long
 
     public const string DisplayMiniRotationSeconds = "display.mini_rotation_seconds";  // int, default 10
+    public const string DisplayPostSessionBrightSeconds = "display.post_session_bright_seconds";  // int, default 300
+    public const string DisplayPostSessionDimSeconds = "display.post_session_dim_seconds";        // int, default 600
 
     public const string AdminPasswordHash = "admin.password_hash";  // BCrypt hash
 }

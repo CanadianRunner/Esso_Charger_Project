@@ -7,6 +7,10 @@ import { useBrightness } from '../hooks/useBrightness';
 import { usePreviewMode } from '../hooks/usePreviewMode';
 import { usePixelShifter } from '../hooks/usePixelShifter';
 import { useDialExercise, EXERCISE_MULTIPLIERS } from '../hooks/useDialExercise';
+import {
+  usePostSessionLinger,
+  getLingerSpeedOverride,
+} from '../hooks/usePostSessionLinger';
 import { OdometerDial, MiniReadout } from '../components/dials';
 import type { MiniReadoutProps } from '../components/dials';
 import KioskFrame from '../components/shared/KioskFrame';
@@ -14,8 +18,10 @@ import type { PumpState } from '../types/PumpState';
 import {
   formatDecimal,
   formatInteger,
-  formatDuration,
+  formatHmsExact,
+  formatCostUsd,
   READOUT_DONE,
+  READOUT_READY,
 } from '../lib/displayFormat';
 
 export default function PumpDisplay() {
@@ -24,9 +30,19 @@ export default function PumpDisplay() {
   const connection = usePumpStore((s) => s.connection);
   const isStale = useStaleData(receivedAt);
   const previewMode = usePreviewMode();
-  const brightness = useBrightness(state?.state);
   const pixelShift = usePixelShifter();
-  const exerciseStep = useDialExercise(state?.state);
+  const linger = usePostSessionLinger({
+    state: state?.state,
+    session: state?.session ?? null,
+    speedFactor: getLingerSpeedOverride(),
+  });
+
+  // Effective display state: during linger, pretend the pump is still in
+  // `session_complete` so Zone 3 reads "✓ Done" and Zone 1/4 hold their values.
+  const effectiveState = linger.isLingering ? 'session_complete' : state?.state;
+  const stateBrightness = useBrightness(effectiveState);
+  const brightness = linger.brightnessOverride ?? stateBrightness;
+  const exerciseStep = useDialExercise(effectiveState, linger.isLingering);
 
   useEffect(() => {
     startPumpHub();
@@ -34,29 +50,52 @@ export default function PumpDisplay() {
 
   const showWarning = isStale || connection === 'disconnected';
 
+  // During linger, freeze the displayed session values to whatever was captured
+  // when the vehicle unplugged. Zone 5 (rate) is never frozen.
   const actualDollars = (state?.session?.costCents ?? 0) / 100;
   const actualKwh = state?.session?.energyKwh ?? 0;
   const actualRate = (state?.rate.centsPerKwh ?? 0) / 100;
 
-  // During the dial-exercise hour-tick, override each dial's value with a
-  // per-dial multiple of the step so every cell rolls through every digit.
-  const sessionDollars = exerciseStep !== null
-    ? exerciseStep * EXERCISE_MULTIPLIERS.zone1Dollars
+  const frozenDollars = linger.data ? linger.data.costCents / 100 : null;
+  const frozenKwh = linger.data ? linger.data.energyKwh : null;
+
+  // Override resolution order: dial exercise > linger freeze > live data.
+  const sessionDollars =
+    exerciseStep !== null ? exerciseStep * EXERCISE_MULTIPLIERS.zone1Dollars
+    : frozenDollars !== null ? frozenDollars
     : actualDollars;
-  const sessionKwh = exerciseStep !== null
-    ? exerciseStep * EXERCISE_MULTIPLIERS.zone4Kwh
+  const sessionKwh =
+    exerciseStep !== null ? exerciseStep * EXERCISE_MULTIPLIERS.zone4Kwh
+    : frozenKwh !== null ? frozenKwh
     : actualKwh;
-  const ratePerKwh = exerciseStep !== null
-    ? exerciseStep * EXERCISE_MULTIPLIERS.zone5Rate
+  const ratePerKwh =
+    exerciseStep !== null ? exerciseStep * EXERCISE_MULTIPLIERS.zone5Rate
     : actualRate;
 
-  const usageRotations = buildUsageRotations(state);
+  // For zone rotations, pass a synthesized state that reflects the linger.
+  const stateForRotations: PumpState | null = linger.isLingering && state
+    ? {
+        ...state,
+        state: 'session_complete',
+        session: {
+          costCents: linger.data?.costCents ?? 0,
+          energyKwh: linger.data?.energyKwh ?? 0,
+          durationSeconds: 0,
+          liveKw: 0,
+        },
+      }
+    : state;
+
+  const usageRotations = buildUsageRotations(stateForRotations);
   const usageIndex = useRotatingIndex(usageRotations.length);
   const usage = usageRotations[usageIndex];
 
-  const sessionRotations = buildSessionRotations(state);
+  const sessionRotations = buildSessionRotations(stateForRotations);
   const sessionIndex = useRotatingIndex(sessionRotations.length);
   const session = sessionRotations[sessionIndex];
+
+  // Opacity dips to 0 during fading_out so the data swap to zeros isn't a hard snap.
+  const containerOpacity = linger.phase === 'fading_out' ? 0 : 1;
 
   return (
     <KioskFrame>
@@ -65,7 +104,9 @@ export default function PumpDisplay() {
       style={{
         filter: `brightness(${brightness})`,
         transform: `translate(${pixelShift.x}px, ${pixelShift.y}px)`,
-        transition: 'filter 1.2s ease-in-out, transform 200ms ease-in-out',
+        opacity: containerOpacity,
+        transition:
+          'filter 1.2s ease-in-out, transform 200ms ease-in-out, opacity 600ms ease-in-out',
       }}
     >
       {showWarning && (
@@ -104,6 +145,7 @@ export default function PumpDisplay() {
       {previewMode && (
         <div className="absolute bottom-2 left-2 text-xs text-neutral-500">
           state: {state?.state ?? '—'} · conn: {connection} · brightness: {brightness.toFixed(2)}
+          {linger.isLingering && ` · linger: ${linger.phase}`}
         </div>
       )}
     </div>
@@ -124,21 +166,29 @@ function buildSessionRotations(state: PumpState | null): MiniReadoutProps[] {
   const liveKw = state?.session?.liveKw ?? 0;
   const sessionKwh = state?.session?.energyKwh ?? 0;
   const durationSeconds = state?.session?.durationSeconds ?? 0;
+  const costDollars = (state?.session?.costCents ?? 0) / 100;
 
   switch (state?.state) {
     case 'charging':
       return [{ icon: '⚡', value: formatDecimal(liveKw), unit: 'kW' }];
     case 'session_complete':
-      return [{ icon: '⚡', value: READOUT_DONE, unit: 'Done' }];
+      // 10-second rotation through the four post-session stats. Used for both
+      // the natural session-complete state and the post-unplug linger window
+      // (the linger synthesizes state='session_complete' to share this rotation).
+      return [
+        { icon: '⏱️', value: formatHmsExact(durationSeconds), unit: '' },
+        { icon: '🔋', value: formatDecimal(sessionKwh), unit: 'kWh' },
+        { icon: '💵', value: formatCostUsd(costDollars), unit: 'USD' },
+        { icon: '⚡', value: READOUT_DONE, unit: 'Done' },
+      ];
     case 'plugged_not_charging':
       return [{ icon: '⚡', value: formatDecimal(0), unit: 'kW' }];
     case 'idle':
     default:
-      // Rotate between duration and kWh added — skip live kW since it'd be 0.
-      return [
-        { icon: '⏱️', value: formatDuration(durationSeconds), unit: '' },
-        { icon: '🔋', value: formatDecimal(sessionKwh), unit: 'kWh' },
-      ];
+      // True idle (no session, post-linger-reset): show a single READY display
+      // instead of rotating zeros that don't communicate anything.
+      // [_] [⚡] [R] [E] [A] [D] [Y] [🔌]
+      return [{ icon: ' ', value: READOUT_READY, unit: '' }];
   }
 }
 

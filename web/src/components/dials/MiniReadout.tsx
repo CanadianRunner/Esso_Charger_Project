@@ -25,11 +25,10 @@ const FADE_DURATION_MS = 250;
  * cells follow with the standard 30ms left-to-right stagger).
  */
 export default function MiniReadout({ icon, value, unit = '' }: MiniReadoutProps) {
-  // Defensive: enforce exactly READOUT_CELL_COUNT chars regardless of caller.
-  const chars = value
-    .padStart(READOUT_CELL_COUNT, '0')
-    .slice(-READOUT_CELL_COUNT)
-    .split('');
+  // Defensive: enforce exactly READOUT_CELL_COUNT cells regardless of caller.
+  // Use Array.from for code-point-aware splitting so multi-byte emojis (🔌,
+  // 🗓️, etc.) count as a single user-perceived character, not a surrogate pair.
+  const chars = splitToCells(value, READOUT_CELL_COUNT);
 
   return (
     <div className="flex items-center gap-2 font-odometer">
@@ -68,4 +67,19 @@ export default function MiniReadout({ icon, value, unit = '' }: MiniReadoutProps
       </div>
     </div>
   );
+}
+
+/**
+ * Code-point-aware split. `Array.from` walks Unicode code points, so 🔌 (a
+ * surrogate pair in UTF-16) counts as one cell instead of two. Pads with '0'
+ * on the left if the value is shorter than `cellCount`, slices to the last
+ * `cellCount` code points if longer.
+ */
+function splitToCells(value: string, cellCount: number): string[] {
+  const codePoints = Array.from(value);
+  if (codePoints.length >= cellCount) {
+    return codePoints.slice(-cellCount);
+  }
+  const padding = Array(cellCount - codePoints.length).fill('0');
+  return [...padding, ...codePoints];
 }
