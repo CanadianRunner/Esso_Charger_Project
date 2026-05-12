@@ -1,8 +1,12 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using PumpCharger.Api.Auth;
 using PumpCharger.Api.Config;
 using PumpCharger.Api.Data;
 using PumpCharger.Api.Extensions;
 using PumpCharger.Api.Hubs;
+using PumpCharger.Api.Services.Auth;
 using PumpCharger.Api.Services.Display;
 using PumpCharger.Api.Services.Polling;
 using PumpCharger.Api.Services.Rate;
@@ -66,6 +70,35 @@ builder.Services.AddHostedService<HpwcPollerService>();
 builder.Services.AddHostedService<SessionManagerService>();
 builder.Services.AddHostedService<DisplayBroadcastService>();
 
+builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+builder.Services.AddSingleton<LoginAttemptTracker>(sp =>
+    new LoginAttemptTracker(sp.GetRequiredService<Func<DateTime>>()));
+
+builder.Services
+    .AddAuthentication(AuthSchemes.Cookie)
+    .AddCookie(AuthSchemes.Cookie, options =>
+    {
+        options.Cookie.Name = AuthSchemes.Cookie;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
+        options.ExpireTimeSpan = TimeSpan.FromDays(30);
+        options.SlidingExpiration = false;
+        // Default cookie auth redirects to /Account/Login on 401 and /Account/AccessDenied
+        // on 403, which is wrong for a JSON API — return status codes instead.
+        options.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = 401; return Task.CompletedTask; };
+        options.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = 403; return Task.CompletedTask; };
+    });
+
+builder.Services
+    .AddAuthorization(options =>
+    {
+        options.AddPolicy(AuthPolicies.AdminOnly, p =>
+            p.RequireAuthenticatedUser().RequireRole(AuthClaims.AdminRole));
+    });
+
 builder.Services.AddSignalR();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -89,6 +122,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseSerilogRequestLogging();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<PumpHub>("/hubs/pump");
