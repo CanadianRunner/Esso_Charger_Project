@@ -178,4 +178,45 @@ public class PumpStateBuilderTests : IDisposable
         Assert.Equal(21, state.Rate.CentsPerKwh);
         Assert.Equal("manual", state.Health.RateSource);
     }
+
+    [Fact]
+    public async Task Display_payload_includes_rotation_and_post_session_timings_from_settings()
+    {
+        // Defaults from SeedDefaultsAsync — 10s rotation, 300s bright, 600s dim.
+        using var s = _provider.CreateScope();
+        var builder = s.ServiceProvider.GetRequiredService<PumpStateBuilder>();
+        var state = await builder.BuildAsync(
+            new HpwcVitals { VehicleConnected = false },
+            new HpwcLifetime(),
+            DateTime.UtcNow,
+            hpwcConnected: true, shellyConnected: false);
+
+        Assert.Equal(10, state.Display.MiniRotationSeconds);
+        Assert.Equal(300, state.Display.PostSessionBrightSeconds);
+        Assert.Equal(600, state.Display.PostSessionDimSeconds);
+    }
+
+    [Fact]
+    public async Task Display_payload_reflects_admin_overrides()
+    {
+        using (var scope = _provider.CreateScope())
+        {
+            var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
+            await settings.SetAsync(SettingKeys.DisplayMiniRotationSeconds, "5");
+            await settings.SetAsync(SettingKeys.DisplayPostSessionBrightSeconds, "120");
+            await settings.SetAsync(SettingKeys.DisplayPostSessionDimSeconds, "240");
+        }
+
+        using var s = _provider.CreateScope();
+        var builder = s.ServiceProvider.GetRequiredService<PumpStateBuilder>();
+        var state = await builder.BuildAsync(
+            new HpwcVitals { VehicleConnected = false },
+            new HpwcLifetime(),
+            DateTime.UtcNow,
+            hpwcConnected: true, shellyConnected: false);
+
+        Assert.Equal(5, state.Display.MiniRotationSeconds);
+        Assert.Equal(120, state.Display.PostSessionBrightSeconds);
+        Assert.Equal(240, state.Display.PostSessionDimSeconds);
+    }
 }

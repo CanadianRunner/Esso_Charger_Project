@@ -32,6 +32,10 @@ public class PumpStateBuilder
         var rateCents = await _settings.GetIntAsync(SettingKeys.RateFlatCentsPerKwh, 13, ct);
         var rateSource = await _settings.GetAsync(SettingKeys.RateSource, ct) ?? RateSourceValues.Manual;
 
+        var miniRotationSeconds = await _settings.GetIntAsync(SettingKeys.DisplayMiniRotationSeconds, 10, ct);
+        var postSessionBrightSeconds = await _settings.GetIntAsync(SettingKeys.DisplayPostSessionBrightSeconds, 300, ct);
+        var postSessionDimSeconds = await _settings.GetIntAsync(SettingKeys.DisplayPostSessionDimSeconds, 600, ct);
+
         var ytdStart = new DateTime(nowUtc.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         var ytdWh = await _db.Sessions
@@ -83,6 +87,12 @@ public class PumpStateBuilder
                 ShellyConnected = shellyConnected,
                 RateSource = rateSource,
                 RateLastUpdated = nowUtc.ToString("o")
+            },
+            Display = new PumpStateDisplay
+            {
+                MiniRotationSeconds = miniRotationSeconds,
+                PostSessionBrightSeconds = postSessionBrightSeconds,
+                PostSessionDimSeconds = postSessionDimSeconds
             }
         };
     }

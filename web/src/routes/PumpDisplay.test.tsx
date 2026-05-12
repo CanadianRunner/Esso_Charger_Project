@@ -30,6 +30,11 @@ function buildState(overrides: Partial<PumpState> = {}): PumpState {
       rateSource: 'manual',
       rateLastUpdated: new Date().toISOString(),
     },
+    display: {
+      miniRotationSeconds: 10,
+      postSessionBrightSeconds: 300,
+      postSessionDimSeconds: 600,
+    },
     ...overrides,
   };
 }

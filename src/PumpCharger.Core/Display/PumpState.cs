@@ -8,6 +8,14 @@ public record PumpState
     public required PumpStateRate Rate { get; init; }
     public required string ServerTime { get; init; }           // ISO 8601 UTC
     public required PumpStateHealth Health { get; init; }
+    public required PumpStateDisplay Display { get; init; }
+}
+
+public record PumpStateDisplay
+{
+    public required int MiniRotationSeconds { get; init; }
+    public required int PostSessionBrightSeconds { get; init; }
+    public required int PostSessionDimSeconds { get; init; }
 }
 
 public record PumpStateSession

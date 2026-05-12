@@ -28,6 +28,12 @@ export interface PumpStateHealth {
   rateLastUpdated: string;
 }
 
+export interface PumpStateDisplay {
+  miniRotationSeconds: number;
+  postSessionBrightSeconds: number;
+  postSessionDimSeconds: number;
+}
+
 export interface PumpState {
   state: DisplayState;
   session: PumpStateSession | null;
@@ -35,4 +41,5 @@ export interface PumpState {
   rate: PumpStateRate;
   serverTime: string;
   health: PumpStateHealth;
+  display: PumpStateDisplay;
 }

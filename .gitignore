@@ -55,3 +55,6 @@ docs/reference/*.png
 
 # Personal design brief, not for public repo
 docs/BUILD_SPEC.md
+
+# Local working notes
+CLAUDE.md

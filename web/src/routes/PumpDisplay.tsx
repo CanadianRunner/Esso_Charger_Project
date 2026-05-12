@@ -31,9 +31,14 @@ export default function PumpDisplay() {
   const isStale = useStaleData(receivedAt);
   const previewMode = usePreviewMode();
   const pixelShift = usePixelShifter();
+
+  // Display config flows from backend settings via SignalR. Until the first
+  // pumpState arrives the hooks fall back to their built-in defaults.
   const linger = usePostSessionLinger({
     state: state?.state,
     session: state?.session ?? null,
+    brightSeconds: state?.display.postSessionBrightSeconds,
+    dimSeconds: state?.display.postSessionDimSeconds,
     speedFactor: getLingerSpeedOverride(),
   });
 
@@ -73,6 +78,8 @@ export default function PumpDisplay() {
     : actualRate;
 
   // For zone rotations, pass a synthesized state that reflects the linger.
+  // The session-complete rotation reads duration via formatHmsExact, so the
+  // captured linger duration needs to flow through here.
   const stateForRotations: PumpState | null = linger.isLingering && state
     ? {
         ...state,
@@ -80,18 +87,19 @@ export default function PumpDisplay() {
         session: {
           costCents: linger.data?.costCents ?? 0,
           energyKwh: linger.data?.energyKwh ?? 0,
-          durationSeconds: 0,
+          durationSeconds: linger.data?.durationSeconds ?? 0,
           liveKw: 0,
         },
       }
     : state;
 
+  const rotationIntervalMs = (state?.display.miniRotationSeconds ?? 10) * 1000;
   const usageRotations = buildUsageRotations(stateForRotations);
-  const usageIndex = useRotatingIndex(usageRotations.length);
+  const usageIndex = useRotatingIndex(usageRotations.length, rotationIntervalMs);
   const usage = usageRotations[usageIndex];
 
   const sessionRotations = buildSessionRotations(stateForRotations);
-  const sessionIndex = useRotatingIndex(sessionRotations.length);
+  const sessionIndex = useRotatingIndex(sessionRotations.length, rotationIntervalMs);
   const session = sessionRotations[sessionIndex];
 
   // Opacity dips to 0 during fading_out so the data swap to zeros isn't a hard snap.
