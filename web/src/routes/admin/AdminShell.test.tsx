@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import AdminShell from './AdminShell';
@@ -70,5 +71,52 @@ describe('AdminShell', () => {
     await waitFor(() => {
       expect(screen.getByText('Loading…')).toBeInTheDocument();
     });
+  });
+
+  it('renders chrome (title, sign-out button, nav) when authed', async () => {
+    mockFetch({ authed: true, hasPassword: true });
+    renderShellAt('/admin');
+    await screen.findByText('dashboard content');
+    expect(screen.getByText('PumpCharger Admin')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
+  });
+
+  it('disables nav items that are not yet implemented', async () => {
+    mockFetch({ authed: true, hasPassword: true });
+    renderShellAt('/admin');
+    await screen.findByText('dashboard content');
+    for (const label of ['Sessions', 'Settings', 'Diagnostics']) {
+      const el = screen.getByText(label);
+      expect(el).toHaveAttribute('aria-disabled', 'true');
+    }
+  });
+
+  it('signs the user out and routes to /admin/login on click', async () => {
+    const fetchCalls: string[] = [];
+    global.fetch = vi.fn((url: RequestInfo | URL) => {
+      const u = url.toString();
+      fetchCalls.push(u);
+      if (u.endsWith('/api/auth/logout')) {
+        useAuthStore.setState({ authed: false });
+        return Promise.resolve(new Response('{}', { status: 200 }));
+      }
+      // status call: first returns authed; subsequent returns unauthed.
+      const authed = !fetchCalls.includes('/api/auth/logout');
+      return Promise.resolve(
+        new Response(JSON.stringify({ authed, hasPassword: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    }) as unknown as typeof fetch;
+
+    const user = userEvent.setup();
+    renderShellAt('/admin');
+    await screen.findByText('dashboard content');
+    await user.click(screen.getByRole('button', { name: /sign out/i }));
+
+    expect(await screen.findByText('login page')).toBeInTheDocument();
+    expect(fetchCalls).toContain('/api/auth/logout');
   });
 });

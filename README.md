@@ -25,23 +25,26 @@ I plan to update this README with images and my progress as I tackle the unfores
 
 ![RestoredPump](images/starter_pump.png)
 
-## Update #7 (05/11/2026)
+## Update #8 (05/11/2026)
 
-_Phase 6 is complete -- always-on lifecycle and the small touches that make the display feel alive:_
+_Phase 7 admin UI -- auth, dashboard, and the kiosk view on a phone:_
 
-This phase was less about new visual surfaces and more about how the display behaves over time when nobody's actively charging.  Three pieces landed.
+<p align="center">
+  <img src="images/WIP_Mobile2.PNG" alt="Admin dashboard on iPhone with active charging session" width="320" />
+  <img src="images/WIP_Mobile1.PNG" alt="Admin dashboard on iPhone mid-rotation" width="320" />
+</p>
 
-**Brightness modes and preview toggle.**  The kiosk display now adjusts brightness based on what's happening: full brightness during charging or session-complete, dimmed to 60% during idle or plugged-but-not-charging, dimmed further to 30% during overnight hours (default 23:00–06:00).  Transitions fade smoothly via CSS over a little over a second.  A `?preview=true` URL parameter brings back all the dev artifacts (zone labels, the `$`/`SALE` flank labels, a bottom debug strip) for layout work; without it, only the values inside the cutouts render -- matching the production-kiosk view since the static labels will be vinyl stickers on the actual pump face.
+_Admin dashboard rendering on iPhone over LAN.  Embedded kiosk view scales to fit, recent sessions and system health visible below._
 
-**Burn-in mitigation.**  Outdoor displays running 24/7 for years can hold static content into the panel permanently, so every 60 seconds the entire kiosk container shifts by ±1 pixel in a random direction.  Imperceptible to a viewer, but it exercises adjacent pixels.  Once an hour during true idle, all the odometer dials do a "tick-through" exercise -- rolling every digit cell through 0 through 9 once before snapping back to their actual values.  Looks like the pump is checking itself once an hour, and it gives every cell a workout against burn-in.  A `?exercise=now` URL param force-triggers the exercise for visual review.
+Three pieces have landed across Phase 7 so far.
 
-**Post-session lifecycle.**  When a vehicle unplugs, the display now lingers on the just-completed session's data instead of immediately resetting.  For the first 5 minutes it stays at full brightness with the session totals frozen in place.  For the next 10 minutes it drops to dim brightness with the same data.  After 15 minutes total, the digits briefly fade out and the display resets to a true-idle state.  Any new plug-in during the linger window immediately cancels the lifecycle so the new session takes over without bleed-through -- if my wife plugs in her Tesla three minutes after I unplug my Rivian, the Rivian's data disappears and the Tesla session takes over instantly.  The lingering is purely a frontend UX convenience; a reboot during the window just starts fresh at idle.
+**Backend auth.**  BCrypt password hashing (work factor 11), cookie-based session auth (HttpOnly + SameSite=Strict + Secure-in-production), and a per-IP sliding-window rate limiter that locks an IP out for 15 minutes after 5 failed attempts.  Audit log entries on password setup, login, logout, and lockout events.  Cookie auth normally redirects 401s and 403s to `/Account/Login` and `/Account/AccessDenied`; for a JSON API both events are overridden to return raw status codes instead.  First-run flow is gated by a `hasPassword` flag on `GET /api/auth/status` -- the frontend reads it and decides between the setup form and the sign-in form.
 
-Zone 3 (SESSION) also got smarter about what to display in each state.  During true idle (no recent session) it shows a static `[blank] [⚡] R E A D Y [🔌]` readout instead of meaningless zero rotations -- communicates both that the pump is ready and the action you want the user to take.  During the post-session linger window it cycles every 10 seconds through four stats: H:MM:SS duration, kWh delivered, USD cost, and the ✓ Done state -- so someone glancing at the pump within the 15-minute window sees all four post-session numbers cycle by in 40 seconds.
+**Frontend auth.**  A zustand auth store, a `useAuth` hook wrapping login/setup/logout/refreshStatus, and an `AdminShell` guard that fans out into loading view → setup redirect → login redirect → protected children depending on store state.  Login surfaces wrong-password vs locked-out via different messages.  Setup requires 8+ characters and a matching confirmation before hitting the API.  Remember-device on login extends the cookie to 30 days; default is browser-session only.
 
-A nice side fix landed too: the `MiniReadout` cell row now splits its content via `Array.from` so multi-byte emoji surrogate pairs (the 🔌 plug, the 🗓️ calendar) count as a single user-perceived character.  Without the change, the 🔌 in READY would have broken into two cells of garbage half-surrogates.
+**Admin dashboard.**  `/admin` renders the existing kiosk view component verbatim inside a responsive scaling wrapper -- the same 768×1024 portrait layout that drives the physical pump display, just scaled down to fit whatever viewport it lands in.  On a phone that comes out to roughly 50% scale and the vintage aesthetic survives the resolution change intact, which validates that the kiosk view isn't coupled to the kiosk-only viewport.  Below the embedded display: today/month/year energy totals as stat cards, the most recent 5 sessions in a table with merged/active indicators, and a system health card with controller responsiveness, last poll time, vehicle-connected, and contactor state.  Live state flows through the existing unauthenticated `/hubs/pump` SignalR connection (the same one the kiosk uses); supplementary data fetches `/api/admin/dashboard` (AdminOnly) on mount and every 60s.  No new admin SignalR hub yet -- that comes later when the diagnostics surface needs richer live data.
 
-Test count is up to 114 (59 backend + 55 frontend) and CI is green.
+Test count is up to 185 (86 backend + 99 frontend) and CI is green.
 
 Older updates are archived in [UPDATES.md](UPDATES.md).
 
