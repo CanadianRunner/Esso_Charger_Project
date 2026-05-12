@@ -8,19 +8,20 @@ public class HpwcPollerService : BackgroundService
 {
     private readonly IHpwcClient _hpwc;
     private readonly VitalsBus _bus;
+    private readonly PollerHealth _health;
     private readonly IOptionsMonitor<HpwcOptions> _options;
     private readonly ILogger<HpwcPollerService> _log;
-
-    private int _consecutiveFailures;
 
     public HpwcPollerService(
         IHpwcClient hpwc,
         VitalsBus bus,
+        PollerHealth health,
         IOptionsMonitor<HpwcOptions> options,
         ILogger<HpwcPollerService> log)
     {
         _hpwc = hpwc;
         _bus = bus;
+        _health = health;
         _options = options;
         _log = log;
     }
@@ -39,10 +40,11 @@ public class HpwcPollerService : BackgroundService
                 cts.CancelAfter(opts.TimeoutMs);
 
                 var vitals = await _hpwc.GetVitalsAsync(cts.Token);
-                _consecutiveFailures = 0;
+                var pollAt = DateTime.UtcNow;
+                _health.RecordSuccess(pollAt);
 
                 active = vitals.VehicleConnected;
-                await _bus.PublishAsync(new TimedVitals(DateTime.UtcNow, vitals), stoppingToken);
+                await _bus.PublishAsync(new TimedVitals(pollAt, vitals), stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -50,14 +52,15 @@ public class HpwcPollerService : BackgroundService
             }
             catch (Exception ex)
             {
-                _consecutiveFailures++;
-                if (_consecutiveFailures == 1 || _consecutiveFailures % 10 == 0)
+                _health.RecordFailure();
+                var failures = _health.ConsecutiveFailures;
+                if (failures == 1 || failures % 10 == 0)
                 {
-                    _log.LogWarning(ex, "HPWC poll failed (consecutive failures: {Count})", _consecutiveFailures);
+                    _log.LogWarning(ex, "HPWC poll failed (consecutive failures: {Count})", failures);
                 }
             }
 
-            var delay = NextDelay(active, _consecutiveFailures, opts);
+            var delay = NextDelay(active, _health.ConsecutiveFailures, opts);
             try { await Task.Delay(delay, stoppingToken); }
             catch (OperationCanceledException) { break; }
         }

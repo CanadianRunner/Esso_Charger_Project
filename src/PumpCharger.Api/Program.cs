@@ -63,6 +63,7 @@ builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<ICurrentRateProvider, SettingsRateProvider>();
 
 builder.Services.AddSingleton<VitalsBus>();
+builder.Services.AddSingleton<PollerHealth>();
 builder.Services.AddSingleton<SessionDetector>();
 builder.Services.AddSingleton<SessionStore>();
 builder.Services.AddScoped<PumpStateBuilder>();

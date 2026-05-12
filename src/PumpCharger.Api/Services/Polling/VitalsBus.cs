@@ -14,6 +14,12 @@ public class VitalsBus
 {
     private readonly List<Channel<TimedVitals>> _subscribers = new();
     private readonly object _lock = new();
+    private TimedVitals? _latest;
+
+    public TimedVitals? Latest
+    {
+        get { lock (_lock) return _latest; }
+    }
 
     public ChannelReader<TimedVitals> Subscribe(int capacity = 64)
     {
@@ -30,7 +36,11 @@ public class VitalsBus
     public async Task PublishAsync(TimedVitals vitals, CancellationToken ct = default)
     {
         Channel<TimedVitals>[] snapshot;
-        lock (_lock) snapshot = _subscribers.ToArray();
+        lock (_lock)
+        {
+            _latest = vitals;
+            snapshot = _subscribers.ToArray();
+        }
 
         foreach (var ch in snapshot)
         {
