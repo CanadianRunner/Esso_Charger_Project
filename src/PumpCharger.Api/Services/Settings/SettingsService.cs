@@ -76,6 +76,7 @@ public class SettingsService : ISettingsService
         await SetIfMissingAsync(SettingKeys.RateFlatCentsPerKwh, "13", ct);
         await SetIfMissingAsync(SettingKeys.SessionMergeGraceSeconds, "60", ct);
         await SetIfMissingAsync(SettingKeys.SessionIdleThresholdAmps, "0.5", ct);
+        await SetIfMissingAsync(SettingKeys.SessionPowerSampleIntervalSeconds, "10", ct);
         await SetIfMissingAsync(SettingKeys.LifetimeOffsetWh, "0", ct);
         await SetIfMissingAsync(SettingKeys.DisplayMiniRotationSeconds, "10", ct);
         await SetIfMissingAsync(SettingKeys.DisplayPostSessionBrightSeconds, "300", ct);

@@ -9,6 +9,7 @@ public static class SettingKeys
 
     public const string SessionMergeGraceSeconds = "session.merge_grace_seconds";  // int, default 60
     public const string SessionIdleThresholdAmps = "session.idle_threshold_amps";  // decimal, default 0.5
+    public const string SessionPowerSampleIntervalSeconds = "session.power_sample_interval_seconds";  // int, default 10
 
     public const string HpwcHost = "hpwc.host";
     public const string ShellyHost = "shelly.host";

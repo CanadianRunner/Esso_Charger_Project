@@ -69,6 +69,7 @@ builder.Services.AddSingleton<SessionStore>();
 builder.Services.AddScoped<PumpStateBuilder>();
 builder.Services.AddHostedService<HpwcPollerService>();
 builder.Services.AddHostedService<SessionManagerService>();
+builder.Services.AddHostedService<SessionPowerSampler>();
 builder.Services.AddHostedService<DisplayBroadcastService>();
 
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
