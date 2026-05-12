@@ -1,7 +1,12 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { usePostSessionLinger } from './usePostSessionLinger';
+import { usePostSessionLinger, getLingerSpeedOverride } from './usePostSessionLinger';
+import { isProductionBuild } from '../lib/environment';
 import type { PumpStateSession, DisplayState } from '../types/PumpState';
+
+vi.mock('../lib/environment', () => ({
+  isProductionBuild: vi.fn(() => false),
+}));
 
 const SESSION: PumpStateSession = {
   costCents: 234,
@@ -134,6 +139,18 @@ describe('usePostSessionLinger', () => {
     const { result, rerender } = setup({ state: undefined, session: null });
     rerender({ state: 'idle', session: null });
     expect(result.current.phase).toBe('none');
+  });
+
+  it('getLingerSpeedOverride returns parsed value from ?lingerSpeed', () => {
+    window.history.replaceState({}, '', '/?lingerSpeed=30');
+    expect(getLingerSpeedOverride()).toBe(30);
+  });
+
+  it('getLingerSpeedOverride returns 1 in production even with ?lingerSpeed set', () => {
+    vi.mocked(isProductionBuild).mockReturnValue(true);
+    window.history.replaceState({}, '', '/?lingerSpeed=30');
+    expect(getLingerSpeedOverride()).toBe(1);
+    vi.mocked(isProductionBuild).mockReturnValue(false);
   });
 
   it('cleans up timers on unmount', () => {

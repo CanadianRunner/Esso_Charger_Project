@@ -1,11 +1,17 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useDialExercise, EXERCISE_MULTIPLIERS } from './useDialExercise';
+import { isProductionBuild } from '../lib/environment';
+
+vi.mock('../lib/environment', () => ({
+  isProductionBuild: vi.fn(() => false),
+}));
 
 describe('useDialExercise', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     window.history.replaceState({}, '', '/');
+    vi.mocked(isProductionBuild).mockReturnValue(false);
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -55,6 +61,13 @@ describe('useDialExercise', () => {
   it('does not auto-fire when suspended (post-session linger)', () => {
     const { result } = renderHook(() => useDialExercise('idle', /*suspended*/ true));
     act(() => { vi.advanceTimersByTime(61 * 60_000); });
+    expect(result.current).toBeNull();
+  });
+
+  it('does not force-fire from ?exercise=now in production builds', () => {
+    vi.mocked(isProductionBuild).mockReturnValue(true);
+    window.history.replaceState({}, '', '/?exercise=now');
+    const { result } = renderHook(() => useDialExercise('idle'));
     expect(result.current).toBeNull();
   });
 

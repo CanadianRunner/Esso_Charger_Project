@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DisplayState, PumpStateSession } from '../types/PumpState';
+import { isProductionBuild } from '../lib/environment';
 
 export type LingerPhase = 'none' | 'bright' | 'dim' | 'fading_out';
 
@@ -135,8 +136,13 @@ export function usePostSessionLinger({
   };
 }
 
-/** Reads `?lingerSpeed=N` from the URL for compressed visual testing. */
+/**
+ * Reads `?lingerSpeed=N` from the URL for compressed visual testing.
+ * Always returns 1 in production builds so a bookmarked dev URL can't
+ * accidentally accelerate the live lifecycle on the installed pump.
+ */
 export function getLingerSpeedOverride(): number {
+  if (isProductionBuild()) return 1;
   if (typeof window === 'undefined') return 1;
   const v = new URLSearchParams(window.location.search).get('lingerSpeed');
   if (!v) return 1;

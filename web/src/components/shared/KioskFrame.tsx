@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isProductionBuild } from '../../lib/environment';
 
 const KIOSK_WIDTH = 768;
 const KIOSK_HEIGHT = 1024;
@@ -10,9 +11,13 @@ const KIOSK_HEIGHT = 1024;
  * rather than the same content stretched across a desktop browser.
  *
  * Without the param, renders children unchanged.
+ *
+ * In production builds the param is ignored entirely — the real pump display is
+ * 768×1024 natively, so children render at full size without the scaling wrapper.
  */
 export default function KioskFrame({ children }: { children: React.ReactNode }) {
   const isKiosk =
+    !isProductionBuild() &&
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('scale') === 'kiosk';
 

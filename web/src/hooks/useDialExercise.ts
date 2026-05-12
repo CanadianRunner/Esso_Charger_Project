@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DisplayState } from '../types/PumpState';
+import { isProductionBuild } from '../lib/environment';
 
 const STEP_INTERVAL_MS = 250;
 const HOUR_MS = 60 * 60_000;
@@ -47,10 +48,12 @@ export function useDialExercise(
     tick();
   }, []);
 
-  // Force-trigger via ?exercise=now on mount.
+  // Force-trigger via ?exercise=now on mount. Disabled in production builds
+  // so a bookmarked dev URL can't trigger an unwanted exercise on the pump.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (suspended) return;
+    if (isProductionBuild()) return;
     const force = new URLSearchParams(window.location.search).get('exercise') === 'now';
     if (force) runExercise();
   }, [runExercise, suspended]);
