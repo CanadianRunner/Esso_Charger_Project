@@ -7,6 +7,7 @@ import AdminShell from './routes/admin/AdminShell';
 import AdminDashboard from './routes/admin/AdminDashboard';
 import AdminSessions from './routes/admin/AdminSessions';
 import AdminSessionDetail from './routes/admin/AdminSessionDetail';
+import AdminSettings from './routes/admin/AdminSettings';
 import DialsPreview from './routes/DialsPreview';
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="sessions" element={<AdminSessions />} />
           <Route path="sessions/:id" element={<AdminSessionDetail />} />
+          <Route path="settings" element={<AdminSettings />} />
         </Route>
 
         <Route path="/dev/dials" element={<DialsPreview />} />

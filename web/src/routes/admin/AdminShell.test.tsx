@@ -81,7 +81,7 @@ describe('AdminShell', () => {
     mockFetch({ authed: true, hasPassword: true });
     renderShellAt('/admin');
     await screen.findByText('dashboard content');
-    for (const label of ['Settings', 'Diagnostics']) {
+    for (const label of ['Diagnostics']) {
       const el = screen.getByText(label);
       expect(el).toHaveAttribute('aria-disabled', 'true');
     }

@@ -57,6 +57,4 @@ Older updates are archived in [UPDATES.md](UPDATES.md).
 
 If you have any questions or concerns feel free to contact me at code@sean-keane.com
 
-*This is licensed under the MIT license*
-
-Copyright (c) 01-22-2025 **_Sean Keane_**
+*Copyright © 01-22-2025 **_Sean Keane_**. All rights reserved. This code is published for portfolio review purposes only; no permission is granted for use, modification, or redistribution.*

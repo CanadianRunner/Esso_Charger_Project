@@ -60,6 +60,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddExternalClients(builder.Configuration);
 
 builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddSingleton<SettingsValidator>();
 builder.Services.AddScoped<ICurrentRateProvider, SettingsRateProvider>();
 
 builder.Services.AddSingleton<VitalsBus>();

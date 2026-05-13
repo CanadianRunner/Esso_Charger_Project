@@ -1,0 +1,72 @@
+using System.Globalization;
+using PumpCharger.Core.Settings;
+
+namespace PumpCharger.Api.Services.Settings;
+
+public record ValidationResult(bool Ok, string? Error = null)
+{
+    public static ValidationResult Success() => new(true);
+    public static ValidationResult Fail(string message) => new(false, message);
+}
+
+/// <summary>
+/// Per-key validation of values bound for the settings table. Lives as a
+/// service so future bulk-import / migration paths can reuse the same rules
+/// without duplicating logic.
+///
+/// Rules per key are declarative; the dispatcher in
+/// <see cref="Validate"/> picks the right rule based on the key.
+/// </summary>
+public class SettingsValidator
+{
+    /// <summary>
+    /// Validate a single (key, value) pair. Returns success or an error
+    /// message suitable for surfacing to an admin user.
+    /// </summary>
+    public ValidationResult Validate(string key, string? value)
+    {
+        if (value is null) return ValidationResult.Fail("Value is required.");
+
+        return key switch
+        {
+            // Display: rotation / linger timings — positive ints.
+            SettingKeys.DisplayMiniRotationSeconds => IntInRange(value, 1, 600, "rotation seconds"),
+            SettingKeys.DisplayPostSessionBrightSeconds => IntInRange(value, 0, 3600, "bright seconds"),
+            SettingKeys.DisplayPostSessionDimSeconds => IntInRange(value, 0, 3600, "dim seconds"),
+
+            // Display: brightness factors — decimal in [0, 1] with at most 2 decimal places.
+            SettingKeys.DisplayBrightnessActive => DecimalInRange(value, 0m, 1m, "brightness"),
+            SettingKeys.DisplayBrightnessDim => DecimalInRange(value, 0m, 1m, "brightness"),
+            SettingKeys.DisplayBrightnessOvernight => DecimalInRange(value, 0m, 1m, "brightness"),
+
+            // Display: overnight hours — int in [0, 23]. start == end is the
+            // documented "disabled" semantic, so any value in range is valid.
+            SettingKeys.DisplayOvernightStartHour => IntInRange(value, 0, 23, "hour"),
+            SettingKeys.DisplayOvernightEndHour => IntInRange(value, 0, 23, "hour"),
+
+            // Display: dial exercise interval — 0 disables; positive values
+            // below 300 get clamped client-side. Reject negatives outright.
+            SettingKeys.DisplayDialExerciseIntervalSeconds => IntInRange(value, 0, 86400, "interval seconds"),
+
+            _ => ValidationResult.Fail($"Setting '{key}' is not admin-editable."),
+        };
+    }
+
+    private static ValidationResult IntInRange(string value, int min, int max, string label)
+    {
+        if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v))
+            return ValidationResult.Fail($"'{value}' is not a valid integer for {label}.");
+        if (v < min || v > max)
+            return ValidationResult.Fail($"{label} must be between {min} and {max}.");
+        return ValidationResult.Success();
+    }
+
+    private static ValidationResult DecimalInRange(string value, decimal min, decimal max, string label)
+    {
+        if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var v))
+            return ValidationResult.Fail($"'{value}' is not a valid decimal for {label}.");
+        if (v < min || v > max)
+            return ValidationResult.Fail($"{label} must be between {min} and {max}.");
+        return ValidationResult.Success();
+    }
+}

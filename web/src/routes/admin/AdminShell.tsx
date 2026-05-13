@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useAuth } from '../../hooks/useAuth';
+import { DirtyContext, useDirtyGuardedNav, useDirtyProvider } from '../../hooks/useDirtyGuard';
 
 /**
  * Auth guard + visible chrome (top bar, nav, logout) for the /admin tree.
@@ -14,6 +15,7 @@ export default function AdminShell() {
   const { refreshStatus, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const dirtyContext = useDirtyProvider();
 
   useEffect(() => {
     refreshStatus().catch(() => {
@@ -38,6 +40,8 @@ export default function AdminShell() {
   }
 
   const handleLogout = async () => {
+    if (dirtyContext.get() && !window.confirm('You have unsaved changes. Discard them?')) return;
+    dirtyContext.set(false);
     try {
       await logout();
     } finally {
@@ -46,31 +50,33 @@ export default function AdminShell() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
-      <header className="border-b border-neutral-800 bg-neutral-900">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-          <h1 className="text-sm font-semibold tracking-wide text-neutral-200">
-            PumpCharger Admin
-          </h1>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="text-xs px-3 py-1.5 rounded border border-neutral-700 text-neutral-300 hover:bg-neutral-800"
-          >
-            Sign out
-          </button>
-        </div>
-        <nav className="max-w-6xl mx-auto px-6 flex gap-1 text-sm">
-          <NavItem to="/admin" label="Dashboard" active exact />
-          <NavItem to={sessionsNavTo(location.pathname, location.search)} label="Sessions" active />
-          <NavItem to="#" label="Settings" />
-          <NavItem to="#" label="Diagnostics" />
-        </nav>
-      </header>
-      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-6">
-        <Outlet />
-      </main>
-    </div>
+    <DirtyContext.Provider value={dirtyContext}>
+      <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
+        <header className="border-b border-neutral-800 bg-neutral-900">
+          <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+            <h1 className="text-sm font-semibold tracking-wide text-neutral-200">
+              PumpCharger Admin
+            </h1>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-xs px-3 py-1.5 rounded border border-neutral-700 text-neutral-300 hover:bg-neutral-800"
+            >
+              Sign out
+            </button>
+          </div>
+          <nav className="max-w-6xl mx-auto px-6 flex gap-1 text-sm">
+            <NavItem to="/admin" label="Dashboard" active exact />
+            <NavItem to={sessionsNavTo(location.pathname, location.search)} label="Sessions" active />
+            <NavItem to="/admin/settings" label="Settings" active />
+            <NavItem to="#" label="Diagnostics" />
+          </nav>
+        </header>
+        <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-6">
+          <Outlet />
+        </main>
+      </div>
+    </DirtyContext.Provider>
   );
 }
 
@@ -98,6 +104,7 @@ function NavItem({
   active?: boolean;
   exact?: boolean;
 }) {
+  const guard = useDirtyGuardedNav();
   if (!active) {
     return (
       <span
@@ -113,6 +120,7 @@ function NavItem({
     <NavLink
       to={to}
       end={exact}
+      onClick={guard}
       className={({ isActive }) =>
         `px-3 py-2 border-b-2 ${
           isActive
