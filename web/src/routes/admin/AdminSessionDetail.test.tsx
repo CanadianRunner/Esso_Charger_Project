@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -108,13 +108,15 @@ describe('AdminSessionDetail', () => {
 
   it('saves notes via PATCH after debounce when textarea blurs', async () => {
     const state = setupMockFetch(ENDED_SESSION);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderAt('session-1');
     const textarea = await screen.findByPlaceholderText(/add a note/i);
 
-    await user.clear(textarea);
-    await user.type(textarea, 'updated note');
-    await user.tab(); // blur
+    // fireEvent.change is a single synchronous DOM event — avoids the
+    // user.clear() + user.type() timing race under fake timers that
+    // intermittently let the original "trip to work" content survive into
+    // the typed payload.
+    fireEvent.change(textarea, { target: { value: 'updated note' } });
+    fireEvent.blur(textarea);
     await vi.advanceTimersByTimeAsync(600);
 
     await waitFor(() => {
@@ -126,13 +128,11 @@ describe('AdminSessionDetail', () => {
 
   it('saves notes immediately on Cmd/Ctrl+Enter without waiting for blur', async () => {
     const state = setupMockFetch(ENDED_SESSION);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderAt('session-1');
     const textarea = await screen.findByPlaceholderText(/add a note/i);
 
-    await user.clear(textarea);
-    await user.type(textarea, 'shortcut save');
-    await user.keyboard('{Control>}{Enter}{/Control}');
+    fireEvent.change(textarea, { target: { value: 'shortcut save' } });
+    fireEvent.keyDown(textarea, { key: 'Enter', ctrlKey: true });
 
     await waitFor(() => {
       expect(state.patchCalls.length).toBeGreaterThan(0);
