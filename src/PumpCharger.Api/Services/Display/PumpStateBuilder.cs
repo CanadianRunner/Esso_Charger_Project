@@ -35,6 +35,12 @@ public class PumpStateBuilder
         var miniRotationSeconds = await _settings.GetIntAsync(SettingKeys.DisplayMiniRotationSeconds, 10, ct);
         var postSessionBrightSeconds = await _settings.GetIntAsync(SettingKeys.DisplayPostSessionBrightSeconds, 300, ct);
         var postSessionDimSeconds = await _settings.GetIntAsync(SettingKeys.DisplayPostSessionDimSeconds, 600, ct);
+        var brightnessActive = (double)await _settings.GetDecimalAsync(SettingKeys.DisplayBrightnessActive, 1.0m, ct);
+        var brightnessDim = (double)await _settings.GetDecimalAsync(SettingKeys.DisplayBrightnessDim, 0.6m, ct);
+        var brightnessOvernight = (double)await _settings.GetDecimalAsync(SettingKeys.DisplayBrightnessOvernight, 0.3m, ct);
+        var overnightStartHour = await _settings.GetIntAsync(SettingKeys.DisplayOvernightStartHour, 23, ct);
+        var overnightEndHour = await _settings.GetIntAsync(SettingKeys.DisplayOvernightEndHour, 6, ct);
+        var dialExerciseIntervalSeconds = await _settings.GetIntAsync(SettingKeys.DisplayDialExerciseIntervalSeconds, 3600, ct);
 
         var ytdStart = new DateTime(nowUtc.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -92,7 +98,13 @@ public class PumpStateBuilder
             {
                 MiniRotationSeconds = miniRotationSeconds,
                 PostSessionBrightSeconds = postSessionBrightSeconds,
-                PostSessionDimSeconds = postSessionDimSeconds
+                PostSessionDimSeconds = postSessionDimSeconds,
+                BrightnessActive = brightnessActive,
+                BrightnessDim = brightnessDim,
+                BrightnessOvernight = brightnessOvernight,
+                OvernightStartHour = overnightStartHour,
+                OvernightEndHour = overnightEndHour,
+                DialExerciseIntervalSeconds = dialExerciseIntervalSeconds,
             }
         };
     }

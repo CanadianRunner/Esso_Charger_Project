@@ -32,6 +32,12 @@ export interface PumpStateDisplay {
   miniRotationSeconds: number;
   postSessionBrightSeconds: number;
   postSessionDimSeconds: number;
+  brightnessActive: number;
+  brightnessDim: number;
+  brightnessOvernight: number;
+  overnightStartHour: number;
+  overnightEndHour: number;
+  dialExerciseIntervalSeconds: number;
 }
 
 export interface PumpState {

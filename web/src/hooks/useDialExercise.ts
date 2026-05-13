@@ -3,26 +3,37 @@ import type { DisplayState } from '../types/PumpState';
 import { isProductionBuild } from '../lib/environment';
 
 const STEP_INTERVAL_MS = 250;
-const HOUR_MS = 60 * 60_000;
+const DEFAULT_INTERVAL_SECONDS = 3600;
+const MIN_INTERVAL_SECONDS = 300;
 const CHECK_INTERVAL_MS = 60_000;
 
 /**
- * Once per hour during idle (or immediately if the URL contains `?exercise=now`),
- * cycle a "step" counter 0..9 then null. The PumpDisplay multiplies each step
- * into per-dial values so every cell rolls through every digit — looks like the
- * pump is "ticking" once an hour and exercises pixels that would otherwise hold
- * the same digit for a long idle period.
+ * Once per `intervalSeconds` during idle (or immediately if the URL contains
+ * `?exercise=now`), cycle a "step" counter 0..9 then null. The PumpDisplay
+ * multiplies each step into per-dial values so every cell rolls through every
+ * digit — looks like the pump is "ticking" and exercises pixels that would
+ * otherwise hold the same digit for a long idle period.
  *
  * Returns the current exercise step (0..9) or null when not exercising.
  *
  * Pass `suspended=true` (e.g., during a post-session linger window) to prevent
  * both the auto-fire and the URL force-trigger from running. The lingering
  * just-completed session data takes priority over the exercise tick.
+ *
+ * `intervalSeconds` semantics:
+ *   0 (or negative)             → disabled entirely; the hook never auto-fires
+ *   1..299                      → clamped to 300 to prevent dial-exercise spam
+ *   ≥ 300                       → respected as configured
+ * `?exercise=now` still force-fires in dev builds regardless of interval,
+ * since that's an explicit visual-review trigger.
  */
 export function useDialExercise(
   state: DisplayState | undefined,
-  suspended: boolean = false
+  suspended: boolean = false,
+  intervalSeconds: number = DEFAULT_INTERVAL_SECONDS,
 ): number | null {
+  const effectiveIntervalMs = normalizeInterval(intervalSeconds);
+  const disabled = effectiveIntervalMs === null;
   const [step, setStep] = useState<number | null>(null);
   const lastExerciseAtRef = useRef(0);
   const runningRef = useRef(false);
@@ -58,17 +69,18 @@ export function useDialExercise(
     if (force) runExercise();
   }, [runExercise, suspended]);
 
-  // Hourly check while idle.
+  // Periodic check while idle. Skipped entirely when interval is 0 (disabled).
   useEffect(() => {
     if (suspended) return;
     if (state !== 'idle') return;
+    if (disabled || effectiveIntervalMs === null) return;
     const id = window.setInterval(() => {
-      if (Date.now() - lastExerciseAtRef.current >= HOUR_MS) {
+      if (Date.now() - lastExerciseAtRef.current >= effectiveIntervalMs) {
         runExercise();
       }
     }, CHECK_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [state, runExercise, suspended]);
+  }, [state, runExercise, suspended, disabled, effectiveIntervalMs]);
 
   // Cleanup any in-flight step timer on unmount.
   useEffect(() => {
@@ -80,6 +92,17 @@ export function useDialExercise(
   }, []);
 
   return step;
+}
+
+/**
+ * Translate a configured interval into a usable millisecond delay.
+ * Returns null for the explicit "disabled" semantic (0 or negative).
+ * Values 1..299 clamp to 300s to avoid dial-exercise spam.
+ */
+function normalizeInterval(intervalSeconds: number): number | null {
+  if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) return null;
+  const clamped = Math.max(MIN_INTERVAL_SECONDS, intervalSeconds);
+  return clamped * 1000;
 }
 
 /**

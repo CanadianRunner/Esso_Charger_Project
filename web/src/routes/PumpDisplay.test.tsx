@@ -34,6 +34,12 @@ function buildState(overrides: Partial<PumpState> = {}): PumpState {
       miniRotationSeconds: 10,
       postSessionBrightSeconds: 300,
       postSessionDimSeconds: 600,
+      brightnessActive: 1.0,
+      brightnessDim: 0.6,
+      brightnessOvernight: 0.3,
+      overnightStartHour: 23,
+      overnightEndHour: 6,
+      dialExerciseIntervalSeconds: 3600,
     },
     ...overrides,
   };

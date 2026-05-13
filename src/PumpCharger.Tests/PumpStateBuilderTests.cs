@@ -197,6 +197,25 @@ public class PumpStateBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task Display_payload_includes_brightness_overnight_and_exercise_defaults()
+    {
+        using var s = _provider.CreateScope();
+        var builder = s.ServiceProvider.GetRequiredService<PumpStateBuilder>();
+        var state = await builder.BuildAsync(
+            new HpwcVitals { VehicleConnected = false },
+            new HpwcLifetime(),
+            DateTime.UtcNow,
+            hpwcConnected: true, shellyConnected: false);
+
+        Assert.Equal(1.0, state.Display.BrightnessActive);
+        Assert.Equal(0.6, state.Display.BrightnessDim);
+        Assert.Equal(0.3, state.Display.BrightnessOvernight);
+        Assert.Equal(23, state.Display.OvernightStartHour);
+        Assert.Equal(6, state.Display.OvernightEndHour);
+        Assert.Equal(3600, state.Display.DialExerciseIntervalSeconds);
+    }
+
+    [Fact]
     public async Task Display_payload_reflects_admin_overrides()
     {
         using (var scope = _provider.CreateScope())
@@ -205,6 +224,12 @@ public class PumpStateBuilderTests : IDisposable
             await settings.SetAsync(SettingKeys.DisplayMiniRotationSeconds, "5");
             await settings.SetAsync(SettingKeys.DisplayPostSessionBrightSeconds, "120");
             await settings.SetAsync(SettingKeys.DisplayPostSessionDimSeconds, "240");
+            await settings.SetAsync(SettingKeys.DisplayBrightnessActive, "0.85");
+            await settings.SetAsync(SettingKeys.DisplayBrightnessDim, "0.5");
+            await settings.SetAsync(SettingKeys.DisplayBrightnessOvernight, "0.15");
+            await settings.SetAsync(SettingKeys.DisplayOvernightStartHour, "22");
+            await settings.SetAsync(SettingKeys.DisplayOvernightEndHour, "7");
+            await settings.SetAsync(SettingKeys.DisplayDialExerciseIntervalSeconds, "1800");
         }
 
         using var s = _provider.CreateScope();
@@ -218,5 +243,11 @@ public class PumpStateBuilderTests : IDisposable
         Assert.Equal(5, state.Display.MiniRotationSeconds);
         Assert.Equal(120, state.Display.PostSessionBrightSeconds);
         Assert.Equal(240, state.Display.PostSessionDimSeconds);
+        Assert.Equal(0.85, state.Display.BrightnessActive);
+        Assert.Equal(0.5, state.Display.BrightnessDim);
+        Assert.Equal(0.15, state.Display.BrightnessOvernight);
+        Assert.Equal(22, state.Display.OvernightStartHour);
+        Assert.Equal(7, state.Display.OvernightEndHour);
+        Assert.Equal(1800, state.Display.DialExerciseIntervalSeconds);
     }
 }

@@ -45,9 +45,19 @@ export default function PumpDisplayContent() {
   });
 
   const effectiveState = linger.isLingering ? 'session_complete' : state?.state;
-  const stateBrightness = useBrightness(effectiveState);
+  const stateBrightness = useBrightness(effectiveState, undefined, {
+    active: state?.display.brightnessActive,
+    dim: state?.display.brightnessDim,
+    overnight: state?.display.brightnessOvernight,
+    overnightStartHour: state?.display.overnightStartHour,
+    overnightEndHour: state?.display.overnightEndHour,
+  });
   const brightness = linger.brightnessOverride ?? stateBrightness;
-  const exerciseStep = useDialExercise(effectiveState, linger.isLingering);
+  const exerciseStep = useDialExercise(
+    effectiveState,
+    linger.isLingering,
+    state?.display.dialExerciseIntervalSeconds,
+  );
 
   useEffect(() => {
     startPumpHub();

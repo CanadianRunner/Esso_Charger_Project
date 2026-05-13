@@ -81,6 +81,12 @@ public class SettingsService : ISettingsService
         await SetIfMissingAsync(SettingKeys.DisplayMiniRotationSeconds, "10", ct);
         await SetIfMissingAsync(SettingKeys.DisplayPostSessionBrightSeconds, "300", ct);
         await SetIfMissingAsync(SettingKeys.DisplayPostSessionDimSeconds, "600", ct);
+        await SetIfMissingAsync(SettingKeys.DisplayBrightnessActive, "1.0", ct);
+        await SetIfMissingAsync(SettingKeys.DisplayBrightnessDim, "0.6", ct);
+        await SetIfMissingAsync(SettingKeys.DisplayBrightnessOvernight, "0.3", ct);
+        await SetIfMissingAsync(SettingKeys.DisplayOvernightStartHour, "23", ct);
+        await SetIfMissingAsync(SettingKeys.DisplayOvernightEndHour, "6", ct);
+        await SetIfMissingAsync(SettingKeys.DisplayDialExerciseIntervalSeconds, "3600", ct);
     }
 
     private static string Escape(string v) => v.Replace("\\", "\\\\").Replace("\"", "\\\"");

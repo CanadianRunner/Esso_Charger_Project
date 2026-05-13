@@ -16,6 +16,12 @@ public record PumpStateDisplay
     public required int MiniRotationSeconds { get; init; }
     public required int PostSessionBrightSeconds { get; init; }
     public required int PostSessionDimSeconds { get; init; }
+    public required double BrightnessActive { get; init; }
+    public required double BrightnessDim { get; init; }
+    public required double BrightnessOvernight { get; init; }
+    public required int OvernightStartHour { get; init; }
+    public required int OvernightEndHour { get; init; }
+    public required int DialExerciseIntervalSeconds { get; init; }
 }
 
 public record PumpStateSession
