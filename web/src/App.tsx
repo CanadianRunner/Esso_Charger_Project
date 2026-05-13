@@ -6,12 +6,8 @@ import AdminSetup from './routes/admin/AdminSetup';
 import AdminShell from './routes/admin/AdminShell';
 import AdminDashboard from './routes/admin/AdminDashboard';
 import AdminSessions from './routes/admin/AdminSessions';
+import AdminSessionDetail from './routes/admin/AdminSessionDetail';
 import DialsPreview from './routes/DialsPreview';
-
-// Placeholder until commit 4 adds the real session detail page + chart.
-function SessionDetailPlaceholder() {
-  return <p className="text-neutral-400 text-sm">Session detail coming next.</p>;
-}
 
 export default function App() {
   return (
@@ -25,7 +21,7 @@ export default function App() {
         <Route path="/admin" element={<AdminShell />}>
           <Route index element={<AdminDashboard />} />
           <Route path="sessions" element={<AdminSessions />} />
-          <Route path="sessions/:id" element={<SessionDetailPlaceholder />} />
+          <Route path="sessions/:id" element={<AdminSessionDetail />} />
         </Route>
 
         <Route path="/dev/dials" element={<DialsPreview />} />

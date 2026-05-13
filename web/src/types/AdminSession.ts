@@ -39,3 +39,28 @@ export const DEFAULT_FILTERS: SessionListFilters = {
 };
 
 export const PAGE_SIZE = 25;
+
+export interface PowerSample {
+  unixSecondsUtc: number;
+  kw: number;
+}
+
+export interface SessionDetail {
+  id: string;
+  startedAt: string;
+  endedAt: string | null;
+  durationSeconds: number;
+  energyKwh: number;
+  costCents: number;
+  peakKw: number;
+  rateAtStartCentsPerKwh: number;
+  isMerged: boolean;
+  notes: string | null;
+  powerSamples: PowerSample[];
+}
+
+export interface UpdateSessionRequest {
+  notes?: string;
+  isMerged?: boolean;
+}
+
