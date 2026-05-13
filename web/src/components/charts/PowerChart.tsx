@@ -2,9 +2,11 @@ import { useMemo } from 'react';
 import type { PowerSample } from '../../types/AdminSession';
 import {
   buildChartPaths,
+  buildClockBoundaryTicks,
   catmullRomPath,
   medianSampleInterval,
   niceAxis,
+  pickTimeTickIntervalSeconds,
   segmentSamples,
 } from './powerChartMath';
 
@@ -12,7 +14,9 @@ const WIDTH = 800;
 const HEIGHT = 280;
 const PAD_LEFT = 50;
 const PAD_RIGHT = 12;
-const PAD_TOP = 12;
+// 6px of extra breathing room above the topmost gridline so the Y-axis label
+// doesn't visually crowd the curve, even after the niceAxis ceiling fix.
+const PAD_TOP = 18;
 const PAD_BOTTOM = 30;
 const STROKE_COLOR = '#f8f3e1'; // cream — matches the kiosk dial digits
 const GRID_COLOR = 'rgba(248, 243, 225, 0.08)';
@@ -61,13 +65,12 @@ export default function PowerChart({ samples, gapThresholdSeconds }: PowerChartP
 
     const { stroke, fill } = buildChartPaths(scaledSegments, baselineY);
 
-    // 5 evenly-spaced x ticks between t0 and t1.
-    const xTicks: { x: number; label: string }[] = [];
-    const tickCount = 5;
-    for (let i = 0; i <= tickCount; i++) {
-      const t = t0 + (tSpan * i) / tickCount;
-      xTicks.push({ x: scaleX(t), label: formatTickTime(t) });
-    }
+    // X-axis ticks snap to clean clock boundaries (1/2/5/10/15/30 min, 1/2/4/6/12 hr,
+    // 1 day) rather than evenly-spaced fractional timestamps, so labels read as
+    // wall-clock times the user can mentally anchor to.
+    const intervalSec = pickTimeTickIntervalSeconds(tSpan, 6);
+    const xTickStamps = buildClockBoundaryTicks(t0, t1, intervalSec);
+    const xTicks = xTickStamps.map((t) => ({ x: scaleX(t), label: formatTickTime(t) }));
 
     const yTicks = yAxis.ticks.map((kw) => ({ y: scaleY(kw), label: formatKw(kw) }));
 
