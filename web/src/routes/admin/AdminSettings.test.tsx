@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -79,15 +79,13 @@ describe('AdminSettings', () => {
   });
 
   it('marks the page dirty and shows the save bar when a value changes', async () => {
-    const user = userEvent.setup();
     renderAt();
     await screen.findByText(/mini-readout rotation/i);
 
     // Find the brightness-dim input by its dim label, then change.
     const dimLabel = screen.getByText(/dim \(idle/i);
-    const dimInput = dimLabel.parentElement!.querySelector('input[type="number"]')!;
-    await user.clear(dimInput as HTMLInputElement);
-    await user.type(dimInput as HTMLInputElement, '40');
+    const dimInput = dimLabel.parentElement!.querySelector('input[type="number"]') as HTMLInputElement;
+    fireEvent.change(dimInput, { target: { value: '40' } });
 
     expect(screen.getByText(/unsaved changes/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
@@ -100,8 +98,7 @@ describe('AdminSettings', () => {
 
     const dimLabel = screen.getByText(/dim \(idle/i);
     const dimInput = dimLabel.parentElement!.querySelector('input[type="number"]') as HTMLInputElement;
-    await user.clear(dimInput);
-    await user.type(dimInput, '40');
+    fireEvent.change(dimInput, { target: { value: '40' } });
 
     expect(dimInput.value).toBe('40');
 
@@ -118,8 +115,7 @@ describe('AdminSettings', () => {
 
     const dimLabel = screen.getByText(/dim \(idle/i);
     const dimInput = dimLabel.parentElement!.querySelector('input[type="number"]') as HTMLInputElement;
-    await user.clear(dimInput);
-    await user.type(dimInput, '40');
+    fireEvent.change(dimInput, { target: { value: '40' } });
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -153,8 +149,7 @@ describe('AdminSettings', () => {
 
     const dimLabel = screen.getByText(/dim \(idle/i);
     const dimInput = dimLabel.parentElement!.querySelector('input[type="number"]') as HTMLInputElement;
-    await user.clear(dimInput);
-    await user.type(dimInput, '40');
+    fireEvent.change(dimInput, { target: { value: '40' } });
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await screen.findByText(/brightness must be between 0 and 1/i);
