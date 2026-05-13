@@ -3,6 +3,11 @@ using PumpCharger.Api.Services.External.Fake;
 
 namespace PumpCharger.Api.Controllers;
 
+/// <summary>
+/// Legacy demo endpoints for the fake simulator. Kept for backward
+/// compatibility with manual workflows; new development should prefer
+/// <c>POST /api/dev/sim/plug-in</c>.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class DemoController : ControllerBase
@@ -15,19 +20,11 @@ public class DemoController : ControllerBase
     }
 
     [HttpPost("plug-in")]
-    public IActionResult PlugIn() => RunOrNotFound(s => s.PlugIn());
+    public IActionResult PlugIn([FromQuery] int? durationSeconds) =>
+        RunOrNotFound(s => s.PlugIn(durationSeconds));
 
     [HttpPost("unplug")]
     public IActionResult Unplug() => RunOrNotFound(s => s.Unplug());
-
-    [HttpPost("start-charging")]
-    public IActionResult StartCharging() => RunOrNotFound(s => s.StartCharging());
-
-    [HttpPost("stop-charging")]
-    public IActionResult StopCharging() => RunOrNotFound(s => s.StopCharging());
-
-    [HttpPost("trigger-cycling")]
-    public IActionResult TriggerCycling() => RunOrNotFound(s => s.TriggerCyclingPause());
 
     [HttpPost("simulate-network-failure")]
     public IActionResult SimulateNetworkFailure([FromQuery] int seconds = 60)

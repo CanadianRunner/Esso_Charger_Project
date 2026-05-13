@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using PumpCharger.Api.Services.External.Fake;
 using PumpCharger.Core.External;
 
 namespace PumpCharger.Api.Controllers;
@@ -10,12 +11,36 @@ public class DevController : ControllerBase
     private readonly IHpwcClient _hpwc;
     private readonly IShellyClient _shelly;
     private readonly IOpenEiClient _openEi;
+    private readonly IHostEnvironment _env;
+    private readonly IServiceProvider _services;
 
-    public DevController(IHpwcClient hpwc, IShellyClient shelly, IOpenEiClient openEi)
+    public DevController(
+        IHpwcClient hpwc,
+        IShellyClient shelly,
+        IOpenEiClient openEi,
+        IHostEnvironment env,
+        IServiceProvider services)
     {
         _hpwc = hpwc;
         _shelly = shelly;
         _openEi = openEi;
+        _env = env;
+        _services = services;
+    }
+
+    /// <summary>
+    /// Trigger a fresh simulated charging session. Gated to Development +
+    /// fake-mode only; returns 404 otherwise. The simulator otherwise stays in
+    /// Idle until explicitly plugged in.
+    /// </summary>
+    [HttpPost("sim/plug-in")]
+    public IActionResult PlugInSimulator([FromQuery] int? durationSeconds)
+    {
+        if (!_env.IsDevelopment()) return NotFound();
+        var sim = _services.GetService<FakeHpwcSimulator>();
+        if (sim is null) return NotFound(new { error = "Simulator not registered (Mode=Real)." });
+        var snap = sim.PlugIn(durationSeconds);
+        return Ok(new { state = snap.State.ToString(), chargingDurationSeconds = durationSeconds });
     }
 
     [HttpGet("hpwc/vitals")]

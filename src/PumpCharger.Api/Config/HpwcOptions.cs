@@ -18,16 +18,26 @@ public class HpwcOptions
     public FakeHpwcOptions Fake { get; set; } = new();
 }
 
+/// <summary>
+/// Options for the fake HPWC simulator. Time-related values are in sim-seconds;
+/// <see cref="TimeAcceleration"/> on the simulator drives how fast sim-time
+/// advances per real-second.
+/// </summary>
 public class FakeHpwcOptions
 {
     public double TimeAcceleration { get; set; } = 1.0;
     public long InitialLifetimeWh { get; set; } = 1_234_500;
-    public double ChargeKw { get; set; } = 10.0;
 
-    public int IdleSeconds { get; set; } = 30;
-    public int PluggedHandshakeSeconds { get; set; } = 5;
-    public int FirstChargeSeconds { get; set; } = 300;
-    public int CyclingPauseSeconds { get; set; } = 30;
-    public int SecondChargeSeconds { get; set; } = 60;
-    public int SessionCompleteSeconds { get; set; } = 15;
+    // Power profile parameters.
+    public double PeakKw { get; set; } = 10.0;
+    public double TaperEndKw { get; set; } = 1.0;
+    public double JitterAmplitudeKw { get; set; } = 0.3;
+
+    // Session timing parameters (sim-seconds).
+    public int PluggedHandshakeSeconds { get; set; } = 10;
+    public int ChargingDurationSeconds { get; set; } = 900;
+    public int RampSeconds { get; set; } = 30;
+    public int TrickleSeconds { get; set; } = 30;
+    public double TaperFraction { get; set; } = 0.25;
+    public int SessionCompleteSeconds { get; set; } = 30;
 }

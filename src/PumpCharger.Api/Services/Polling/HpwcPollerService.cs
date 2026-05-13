@@ -9,6 +9,7 @@ public class HpwcPollerService : BackgroundService
     private readonly IHpwcClient _hpwc;
     private readonly VitalsBus _bus;
     private readonly PollerHealth _health;
+    private readonly Func<DateTime> _clock;
     private readonly IOptionsMonitor<HpwcOptions> _options;
     private readonly ILogger<HpwcPollerService> _log;
 
@@ -16,12 +17,14 @@ public class HpwcPollerService : BackgroundService
         IHpwcClient hpwc,
         VitalsBus bus,
         PollerHealth health,
+        Func<DateTime> clock,
         IOptionsMonitor<HpwcOptions> options,
         ILogger<HpwcPollerService> log)
     {
         _hpwc = hpwc;
         _bus = bus;
         _health = health;
+        _clock = clock;
         _options = options;
         _log = log;
     }
@@ -40,7 +43,7 @@ public class HpwcPollerService : BackgroundService
                 cts.CancelAfter(opts.TimeoutMs);
 
                 var vitals = await _hpwc.GetVitalsAsync(cts.Token);
-                var pollAt = DateTime.UtcNow;
+                var pollAt = _clock();
                 _health.RecordSuccess(pollAt);
 
                 active = vitals.VehicleConnected;

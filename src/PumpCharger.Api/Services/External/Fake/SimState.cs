@@ -5,7 +5,5 @@ public enum SimState
     Idle,
     Plugged,
     Charging,
-    CyclingPause,
-    ChargingResumed,
     SessionComplete
 }

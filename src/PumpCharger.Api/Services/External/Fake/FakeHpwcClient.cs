@@ -46,9 +46,8 @@ public class FakeHpwcClient : IHpwcClient
             {
                 SimState.Idle => 0,
                 SimState.Plugged or SimState.SessionComplete => 1,
-                SimState.Charging or SimState.ChargingResumed => 4,
-                SimState.CyclingPause => 5,
-                _ => 0
+                SimState.Charging => 4,
+                _ => 0,
             }
         });
     }

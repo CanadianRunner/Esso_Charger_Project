@@ -20,10 +20,22 @@ public static class ExternalServicesExtensions
         var shelly = configuration.GetSection(ShellyOptions.SectionName).Get<ShellyOptions>() ?? new ShellyOptions();
         var openEi = configuration.GetSection(OpenEiOptions.SectionName).Get<OpenEiOptions>() ?? new OpenEiOptions();
 
-        services.AddSingleton<Func<DateTime>>(_ => () => DateTime.UtcNow);
-
         if (hpwc.Mode == ClientMode.Fake)
         {
+            // Fake mode: install a sim-time clock that accelerates time so dev
+            // sessions complete in minutes of wall clock. Func<DateTime> for the
+            // rest of the system delegates to it so timestamps, durations,
+            // sample stamps, and dashboard period boundaries all read sim-time.
+            services.AddSingleton(sp =>
+            {
+                var opts = sp.GetRequiredService<IOptions<HpwcOptions>>().Value.Fake;
+                return new SimulatedClock(opts.TimeAcceleration);
+            });
+            services.AddSingleton<Func<DateTime>>(sp =>
+            {
+                var clock = sp.GetRequiredService<SimulatedClock>();
+                return () => clock.UtcNow();
+            });
             services.AddSingleton(sp =>
             {
                 var opts = sp.GetRequiredService<IOptions<HpwcOptions>>().Value.Fake;
@@ -34,6 +46,7 @@ public static class ExternalServicesExtensions
         }
         else
         {
+            services.AddSingleton<Func<DateTime>>(_ => () => DateTime.UtcNow);
             services.AddSingleton<IHpwcClient, HpwcHttpClient>();
         }
 
