@@ -131,6 +131,26 @@ public class AdminSessionsTests
     }
 
     [Fact]
+    public async Task List_floats_active_session_to_the_top_regardless_of_sort()
+    {
+        await using var factory = new TestApiFactory();
+        var client = await CreateAuthenticatedClientAsync(factory);
+        var t = DateTime.UtcNow;
+        await SeedSessionsAsync(factory,
+            new SeedSession(t.AddDays(-2), t.AddDays(-2).AddHours(1), 20_000L, false), // ended, high energy
+            new SeedSession(t.AddDays(-5), null, 1_000L, false),                       // active, low energy
+            new SeedSession(t.AddDays(-3), t.AddDays(-3).AddHours(1), 8_000L, false));  // ended, mid energy
+
+        // Energy desc with active=null should put the active session first even
+        // though its energy is the smallest.
+        var body = await GetJsonAsync<SessionListResponse>(client, "/api/admin/sessions?sort=energy&dir=desc");
+        Assert.Equal(3, body.TotalCount);
+        Assert.Null(body.Items[0].EndedAt);
+        Assert.Equal(20.0, body.Items[1].EnergyKwh);
+        Assert.Equal(8.0, body.Items[2].EnergyKwh);
+    }
+
+    [Fact]
     public async Task List_sorts_by_energy_descending()
     {
         await using var factory = new TestApiFactory();

@@ -74,11 +74,17 @@ public class AdminDashboardTests : IClassFixture<TestApiFactory>
         await using var factory = new TestApiFactory();
         var client = await CreateAuthenticatedClientAsync(factory);
 
+        // Anchor seeded dates to today's UTC start rather than relative offsets
+        // off DateTime.UtcNow, so the test isn't flaky near UTC midnight.
         var now = DateTime.UtcNow;
+        var todayStart = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var yearStart = new DateTime(now.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
         await SeedSessionsAsync(factory,
-            (now.AddHours(-2), now.AddHours(-1), 10_000L, false),  // today, 10 kWh
-            (now.AddDays(-3), now.AddDays(-3).AddHours(1), 5_000L, true),  // this month, 5 kWh, merged
-            (now.AddDays(-90), now.AddDays(-90).AddHours(2), 8_000L, false));  // this year, 8 kWh
+            (todayStart.AddHours(12), todayStart.AddHours(13), 10_000L, false),  // today, 10 kWh
+            (monthStart.AddDays(5), monthStart.AddDays(5).AddHours(1), 5_000L, true),  // this month, 5 kWh, merged
+            (yearStart.AddDays(20), yearStart.AddDays(20).AddHours(2), 8_000L, false));  // this year, 8 kWh
 
         var resp = await client.GetAsync("/api/admin/dashboard");
         var body = await resp.Content.ReadFromJsonAsync<DashboardResponse>(JsonOpts);

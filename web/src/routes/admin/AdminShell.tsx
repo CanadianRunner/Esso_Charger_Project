@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
-import { Navigate, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useAuth } from '../../hooks/useAuth';
 
 /**
  * Auth guard + visible chrome (top bar, nav, logout) for the /admin tree.
- * Nav items beyond Dashboard are placeholders until their phases land.
+ * Renders nested admin routes via <Outlet />.
  */
-export default function AdminShell({ children }: { children: React.ReactNode }) {
+export default function AdminShell() {
   const loaded = useAuthStore((s) => s.loaded);
   const hasPassword = useAuthStore((s) => s.hasPassword);
   const authed = useAuthStore((s) => s.authed);
@@ -61,18 +61,43 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </button>
         </div>
         <nav className="max-w-6xl mx-auto px-6 flex gap-1 text-sm">
-          <NavItem to="/admin" label="Dashboard" active />
-          <NavItem to="#" label="Sessions" />
+          <NavItem to="/admin" label="Dashboard" active exact />
+          <NavItem to={sessionsNavTo(location.pathname, location.search)} label="Sessions" active />
           <NavItem to="#" label="Settings" />
           <NavItem to="#" label="Diagnostics" />
         </nav>
       </header>
-      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-6">{children}</main>
+      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-6">
+        <Outlet />
+      </main>
     </div>
   );
 }
 
-function NavItem({ to, label, active = false }: { to: string; label: string; active?: boolean }) {
+/**
+ * Compute the Sessions nav link `to` so that navigating within the sessions
+ * context (list ↔ detail) preserves the active filter querystring, while
+ * navigating from elsewhere (Dashboard, Settings, ...) lands on bare
+ * /admin/sessions with no filters.
+ */
+function sessionsNavTo(pathname: string, search: string): string {
+  if (pathname.startsWith('/admin/sessions')) {
+    return `/admin/sessions${search}`;
+  }
+  return '/admin/sessions';
+}
+
+function NavItem({
+  to,
+  label,
+  active = false,
+  exact = false,
+}: {
+  to: string;
+  label: string;
+  active?: boolean;
+  exact?: boolean;
+}) {
   if (!active) {
     return (
       <span
@@ -87,7 +112,7 @@ function NavItem({ to, label, active = false }: { to: string; label: string; act
   return (
     <NavLink
       to={to}
-      end
+      end={exact}
       className={({ isActive }) =>
         `px-3 py-2 border-b-2 ${
           isActive

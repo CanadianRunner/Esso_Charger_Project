@@ -1,12 +1,5 @@
-export interface SessionSummary {
-  id: string;
-  startedAt: string;
-  endedAt: string | null;
-  durationSeconds: number;
-  energyKwh: number;
-  costCents: number;
-  isMerged: boolean;
-}
+import type { SessionSummary } from './AdminSession';
+export type { SessionSummary };
 
 export interface Aggregates {
   todayKwh: number;

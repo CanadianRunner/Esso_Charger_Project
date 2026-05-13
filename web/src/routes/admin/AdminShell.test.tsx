@@ -20,14 +20,9 @@ function renderShellAt(path: string) {
       <Routes>
         <Route path="/admin/login" element={<p>login page</p>} />
         <Route path="/admin/setup" element={<p>setup page</p>} />
-        <Route
-          path="/admin/*"
-          element={
-            <AdminShell>
-              <p>dashboard content</p>
-            </AdminShell>
-          }
-        />
+        <Route path="/admin" element={<AdminShell />}>
+          <Route index element={<p>dashboard content</p>} />
+        </Route>
       </Routes>
     </MemoryRouter>
   );
@@ -86,10 +81,43 @@ describe('AdminShell', () => {
     mockFetch({ authed: true, hasPassword: true });
     renderShellAt('/admin');
     await screen.findByText('dashboard content');
-    for (const label of ['Sessions', 'Settings', 'Diagnostics']) {
+    for (const label of ['Settings', 'Diagnostics']) {
       const el = screen.getByText(label);
       expect(el).toHaveAttribute('aria-disabled', 'true');
     }
+  });
+
+  it('exposes Dashboard and Sessions as active nav links', async () => {
+    mockFetch({ authed: true, hasPassword: true });
+    renderShellAt('/admin');
+    await screen.findByText('dashboard content');
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/admin');
+    expect(screen.getByRole('link', { name: 'Sessions' })).toHaveAttribute('href', '/admin/sessions');
+  });
+
+  it('Sessions nav preserves the current filter querystring when staying in the sessions context', async () => {
+    mockFetch({ authed: true, hasPassword: true });
+    render(
+      <MemoryRouter initialEntries={['/admin/sessions?merged=true&page=2']}>
+        <Routes>
+          <Route path="/admin" element={<AdminShell />}>
+            <Route index element={<p>dashboard content</p>} />
+            <Route path="sessions" element={<p>sessions list</p>} />
+            <Route path="sessions/:id" element={<p>detail page</p>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByText('sessions list');
+    expect(screen.getByRole('link', { name: 'Sessions' }))
+      .toHaveAttribute('href', '/admin/sessions?merged=true&page=2');
+  });
+
+  it('Sessions nav drops querystring when outside the sessions context', async () => {
+    mockFetch({ authed: true, hasPassword: true });
+    renderShellAt('/admin');
+    await screen.findByText('dashboard content');
+    expect(screen.getByRole('link', { name: 'Sessions' })).toHaveAttribute('href', '/admin/sessions');
   });
 
   it('signs the user out and routes to /admin/login on click', async () => {

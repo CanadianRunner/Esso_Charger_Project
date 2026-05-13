@@ -148,12 +148,16 @@ public class AdminSessionsController : ControllerBase
     private static IQueryable<Session> ApplySort(IQueryable<Session> q, string? sort, string? dir)
     {
         var desc = !string.Equals(dir, "asc", StringComparison.OrdinalIgnoreCase);
+        // Active sessions (EndedAt IS NULL) always float to the top regardless of
+        // the user-requested sort, so the in-progress session stays visible at
+        // the top of page 1 without the frontend needing a separate fetch.
+        var floated = q.OrderByDescending(s => s.EndedAt == null);
         return sort?.ToLowerInvariant() switch
         {
-            "duration" => desc ? q.OrderByDescending(s => s.DurationSeconds) : q.OrderBy(s => s.DurationSeconds),
-            "energy"   => desc ? q.OrderByDescending(s => s.EnergyWh) : q.OrderBy(s => s.EnergyWh),
-            "cost"     => desc ? q.OrderByDescending(s => s.CostCents) : q.OrderBy(s => s.CostCents),
-            _          => desc ? q.OrderByDescending(s => s.StartedAt) : q.OrderBy(s => s.StartedAt),
+            "duration" => desc ? floated.ThenByDescending(s => s.DurationSeconds) : floated.ThenBy(s => s.DurationSeconds),
+            "energy"   => desc ? floated.ThenByDescending(s => s.EnergyWh)        : floated.ThenBy(s => s.EnergyWh),
+            "cost"     => desc ? floated.ThenByDescending(s => s.CostCents)       : floated.ThenBy(s => s.CostCents),
+            _          => desc ? floated.ThenByDescending(s => s.StartedAt)       : floated.ThenBy(s => s.StartedAt),
         };
     }
 

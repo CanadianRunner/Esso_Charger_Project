@@ -171,8 +171,19 @@ function ScaledKioskView({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div ref={wrapperRef} className="w-full overflow-hidden" style={{ height: KIOSK_HEIGHT * scale }}>
-      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: KIOSK_WIDTH }}>
+    <div
+      ref={wrapperRef}
+      className="w-full overflow-hidden flex justify-center"
+      style={{ height: KIOSK_HEIGHT * scale }}
+    >
+      <div
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: 'top center',
+          width: KIOSK_WIDTH,
+          flex: 'none',
+        }}
+      >
         {children}
       </div>
     </div>
