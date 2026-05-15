@@ -58,3 +58,6 @@ docs/BUILD_SPEC.md
 
 # Local working notes
 CLAUDE.md
+
+# Local agent state
+.claude/
