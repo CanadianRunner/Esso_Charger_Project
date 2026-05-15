@@ -115,8 +115,14 @@ function NotesEditor({
   const debounceRef = useRef<number | undefined>();
   const fadeRef = useRef<number | undefined>();
 
-  // Re-sync if the parent reloads the session with different notes.
+  // Re-sync when the parent reloads the session with different notes. Skip the
+  // mount-time run: useState already seeded value from initial, and a fast
+  // user can type between mount-commit and post-commit effect, in which case
+  // an unconditional setValue(initial) would erase their input.
+  const lastInitialRef = useRef(initial);
   useEffect(() => {
+    if (initial === lastInitialRef.current) return;
+    lastInitialRef.current = initial;
     setValue(initial);
     setSavedValue(initial);
   }, [initial]);

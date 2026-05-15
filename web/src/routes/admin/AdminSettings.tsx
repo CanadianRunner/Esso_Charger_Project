@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SettingsSaveError, useAdminSettings } from '../../hooks/useAdminSettings';
 import { useDirtyGuard } from '../../hooks/useDirtyGuard';
@@ -50,7 +50,13 @@ export default function AdminSettings() {
   const [savingState, setSavingState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   // Hydrate the draft once server values arrive (and re-sync after a save).
+  // Guard with a ref so the post-commit effect only fires on genuine
+  // serverValues changes — see CLAUDE.md "don't unconditionally re-sync a prop
+  // into local state in useEffect".
+  const lastSeenServerValuesRef = useRef(serverValues);
   useEffect(() => {
+    if (serverValues === lastSeenServerValuesRef.current) return;
+    lastSeenServerValuesRef.current = serverValues;
     setDraft(serverValues);
   }, [serverValues]);
 
