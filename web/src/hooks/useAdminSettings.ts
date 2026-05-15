@@ -52,27 +52,32 @@ export function useAdminSettings() {
 
   /**
    * Save a batch of changed settings. Throws SettingsSaveError on validation
-   * failure so the caller can surface field-level errors in the UI.
+   * failure so the caller can surface field-level errors in the UI. Pass a
+   * `reason` when the batch includes a high-consequence setting like
+   * lifetime.offset_wh; the backend enforces that lifetime changes carry a
+   * non-empty reason and attaches it to the corresponding audit log entry.
    */
-  const save = useCallback(async (changed: SettingsDraft): Promise<void> => {
+  const save = useCallback(async (changed: SettingsDraft, reason?: string): Promise<void> => {
+    const requestBody: { values: SettingsDraft; reason?: string } = { values: changed };
+    if (reason !== undefined) requestBody.reason = reason;
     const res = await fetch('/api/admin/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values: changed }),
+      body: JSON.stringify(requestBody),
       credentials: 'same-origin',
     });
     if (!res.ok) {
-      let body: SettingsErrorResponse | null = null;
-      try { body = (await res.json()) as SettingsErrorResponse; } catch { /* non-JSON */ }
-      const errors = body?.errors ?? [];
+      let errorBody: SettingsErrorResponse | null = null;
+      try { errorBody = (await res.json()) as SettingsErrorResponse; } catch { /* non-JSON */ }
+      const errors = errorBody?.errors ?? [];
       throw new SettingsSaveError(
-        body?.error ?? errors[0]?.error ?? `Save failed (${res.status})`,
+        errorBody?.error ?? errors[0]?.error ?? `Save failed (${res.status})`,
         errors,
       );
     }
-    const body = (await res.json()) as SettingsResponse;
+    const responseBody = (await res.json()) as SettingsResponse;
     const values: SettingsDraft = {};
-    for (const [k, v] of Object.entries(body.values)) {
+    for (const [k, v] of Object.entries(responseBody.values)) {
       values[k] = v ?? '';
     }
     setState({ serverValues: values, loading: false, error: null });

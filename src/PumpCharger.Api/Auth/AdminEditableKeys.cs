@@ -38,10 +38,36 @@ public static class AdminEditableKeys
         SettingKeys.ShellyHost,
     };
 
+    /// <summary>Keys editable via the Rate tab.</summary>
+    public static readonly IReadOnlySet<string> Rate = new HashSet<string>
+    {
+        SettingKeys.RateSource,
+        SettingKeys.RateFlatCentsPerKwh,
+        SettingKeys.RateOpenEiApiKey,
+        SettingKeys.RateOpenEiScheduleId,
+    };
+
+    /// <summary>Keys editable via the Session tab.</summary>
+    public static readonly IReadOnlySet<string> Session = new HashSet<string>
+    {
+        SettingKeys.SessionMergeGraceSeconds,
+        SettingKeys.SessionIdleThresholdAmps,
+        SettingKeys.SessionPowerSampleIntervalSeconds,
+    };
+
+    /// <summary>Keys editable via the Lifetime tab. Changes here require a
+    /// written reason; the AdminSettingsController enforces this and the
+    /// reason flows through to the audit log.</summary>
+    public static readonly IReadOnlySet<string> Lifetime = new HashSet<string>
+    {
+        SettingKeys.LifetimeOffsetWh,
+    };
+
     /// <summary>
     /// Aggregate of all keys editable across every tab. The controller
     /// validates that PATCH keys appear in this set; future tab commits add
     /// their categories to this aggregate.
     /// </summary>
-    public static readonly IReadOnlySet<string> All = new HashSet<string>(General.Concat(Hardware));
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(
+        General.Concat(Hardware).Concat(Rate).Concat(Session).Concat(Lifetime));
 }

@@ -4,6 +4,11 @@ import { SettingsSaveError, useAdminSettings } from '../../hooks/useAdminSetting
 import { useDirtyGuard } from '../../hooks/useDirtyGuard';
 import SettingsGeneralTab from './settings/SettingsGeneralTab';
 import SettingsHardwareTab from './settings/SettingsHardwareTab';
+import SettingsRateTab from './settings/SettingsRateTab';
+import SettingsSessionTab from './settings/SettingsSessionTab';
+import SettingsLifetimeTab from './settings/SettingsLifetimeTab';
+
+const LIFETIME_OFFSET_KEY = 'lifetime.offset_wh';
 import type { SettingsDraft } from '../../types/AdminSettings';
 
 // Tab switching within the Settings page is intentionally non-destructive —
@@ -22,9 +27,9 @@ interface TabSpec {
 const TABS: TabSpec[] = [
   { key: 'general', label: 'General', active: true },
   { key: 'hardware', label: 'Hardware', active: true },
-  { key: 'rate', label: 'Rate', active: false, note: 'Coming next' },
-  { key: 'session', label: 'Session', active: false, note: 'Coming next' },
-  { key: 'lifetime', label: 'Lifetime', active: false, note: 'Coming next' },
+  { key: 'rate', label: 'Rate', active: true },
+  { key: 'session', label: 'Session', active: true },
+  { key: 'lifetime', label: 'Lifetime', active: true },
   { key: 'account', label: 'Account', active: false, note: 'Coming next' },
   { key: 'backup', label: 'Backup', active: false, note: 'Coming in Phase 8' },
 ];
@@ -83,12 +88,14 @@ export default function AdminSettings() {
     setSavingState('idle');
   }, [serverValues]);
 
-  const doSave = useCallback(async () => {
+  const [lifetimeModalOpen, setLifetimeModalOpen] = useState(false);
+
+  const performSave = useCallback(async (reason?: string) => {
     if (Object.keys(changedKeys).length === 0) return;
     setSavingState('saving');
     setFieldErrors({});
     try {
-      await save(changedKeys);
+      await save(changedKeys, reason);
       setSavingState('saved');
       window.setTimeout(() => setSavingState('idle'), 2000);
     } catch (e) {
@@ -100,6 +107,16 @@ export default function AdminSettings() {
       setSavingState('error');
     }
   }, [changedKeys, save]);
+
+  const doSave = useCallback(() => {
+    // Lifetime offset changes are gated behind a confirmation + reason modal
+    // because they directly change the kiosk's lifetime-energy total.
+    if (LIFETIME_OFFSET_KEY in changedKeys) {
+      setLifetimeModalOpen(true);
+      return;
+    }
+    void performSave();
+  }, [changedKeys, performSave]);
 
   useDirtyGuard(dirty);
 
@@ -161,6 +178,15 @@ export default function AdminSettings() {
         {activeTab === 'hardware' && (
           <SettingsHardwareTab values={draft} fieldErrors={fieldErrors} onChange={update} />
         )}
+        {activeTab === 'rate' && (
+          <SettingsRateTab values={draft} fieldErrors={fieldErrors} onChange={update} />
+        )}
+        {activeTab === 'session' && (
+          <SettingsSessionTab values={draft} fieldErrors={fieldErrors} onChange={update} />
+        )}
+        {activeTab === 'lifetime' && (
+          <SettingsLifetimeTab values={draft} fieldErrors={fieldErrors} onChange={update} />
+        )}
       </section>
 
       <SaveBar
@@ -171,6 +197,81 @@ export default function AdminSettings() {
         onCancel={cancel}
       />
 
+      {lifetimeModalOpen && (
+        <LifetimeReasonModal
+          oldWh={Number(serverValues[LIFETIME_OFFSET_KEY] ?? '0')}
+          newWh={Number(draft[LIFETIME_OFFSET_KEY] ?? '0')}
+          onCancel={() => setLifetimeModalOpen(false)}
+          onConfirm={(reason) => {
+            setLifetimeModalOpen(false);
+            void performSave(reason);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function LifetimeReasonModal({
+  oldWh,
+  newWh,
+  onCancel,
+  onConfirm,
+}: {
+  oldWh: number;
+  newWh: number;
+  onCancel: () => void;
+  onConfirm: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState('');
+  const oldKwh = (oldWh / 1000).toFixed(1);
+  const newKwh = (newWh / 1000).toFixed(1);
+  const canConfirm = reason.trim().length > 0;
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Confirm lifetime offset change"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+    >
+      <div className="max-w-md w-full bg-neutral-900 border border-neutral-700 rounded-lg p-5 shadow-xl">
+        <h3 className="text-base font-semibold text-neutral-100">Confirm lifetime offset change</h3>
+        <p className="mt-2 text-sm text-neutral-300">
+          You are adjusting the lifetime offset from <span className="tabular-nums">{oldKwh}</span> kWh
+          to <span className="tabular-nums">{newKwh}</span> kWh. This will change the displayed
+          lifetime energy total on the kiosk.
+        </p>
+        <label className="block mt-4">
+          <span className="block text-xs uppercase tracking-wide text-neutral-500 mb-1">
+            Reason for adjustment
+          </span>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            autoFocus
+            placeholder="e.g. Adjustment to account for energy delivered before software installation"
+            className="w-full bg-neutral-950 border border-neutral-700 rounded px-3 py-2 text-sm text-neutral-200 focus:outline-none focus:border-amber-400"
+          />
+        </label>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 text-sm rounded border border-neutral-600 text-neutral-200 hover:bg-neutral-800"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!canConfirm}
+            onClick={() => onConfirm(reason.trim())}
+            className="px-3 py-2 text-xs rounded bg-amber-400 text-neutral-900 font-medium hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Confirm adjustment
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

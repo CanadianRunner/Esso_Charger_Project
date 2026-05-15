@@ -124,4 +124,77 @@ public class SettingsValidatorTests
         var result = _v.Validate(SettingKeys.HpwcPollIntervalIdleMs, value);
         Assert.Equal(expectedOk, result.Ok);
     }
+
+    [Theory]
+    [InlineData("manual", true)]
+    [InlineData("openei", true)]
+    [InlineData("", false)]
+    [InlineData("OpenEI", false)]
+    [InlineData("anything-else", false)]
+    public void Rate_source_must_be_manual_or_openei(string value, bool expectedOk)
+    {
+        var result = _v.Validate(SettingKeys.RateSource, value);
+        Assert.Equal(expectedOk, result.Ok);
+    }
+
+    [Theory]
+    [InlineData("0", true)]
+    [InlineData("13", true)]
+    [InlineData("1000", true)]
+    [InlineData("-1", false)]
+    [InlineData("1001", false)]
+    public void Rate_flat_cents_per_kwh_must_be_int_in_zero_to_1000(string value, bool expectedOk)
+    {
+        var result = _v.Validate(SettingKeys.RateFlatCentsPerKwh, value);
+        Assert.Equal(expectedOk, result.Ok);
+    }
+
+    [Theory]
+    [InlineData("0", true)]
+    [InlineData("60", true)]
+    [InlineData("3600", true)]
+    [InlineData("3601", false)]
+    [InlineData("-1", false)]
+    public void Session_merge_grace_in_zero_to_one_hour(string value, bool expectedOk)
+    {
+        var result = _v.Validate(SettingKeys.SessionMergeGraceSeconds, value);
+        Assert.Equal(expectedOk, result.Ok);
+    }
+
+    [Theory]
+    [InlineData("0", true)]
+    [InlineData("0.5", true)]
+    [InlineData("20", true)]
+    [InlineData("20.1", false)]
+    [InlineData("-0.1", false)]
+    public void Session_idle_threshold_amps_in_zero_to_twenty(string value, bool expectedOk)
+    {
+        var result = _v.Validate(SettingKeys.SessionIdleThresholdAmps, value);
+        Assert.Equal(expectedOk, result.Ok);
+    }
+
+    [Theory]
+    [InlineData("0", true)]   // disabled
+    [InlineData("10", true)]
+    [InlineData("3600", true)]
+    [InlineData("3601", false)]
+    [InlineData("-1", false)]
+    public void Session_power_sample_interval_in_zero_to_one_hour(string value, bool expectedOk)
+    {
+        var result = _v.Validate(SettingKeys.SessionPowerSampleIntervalSeconds, value);
+        Assert.Equal(expectedOk, result.Ok);
+    }
+
+    [Theory]
+    [InlineData("0", true)]
+    [InlineData("500000", true)]
+    [InlineData("-500000", true)]
+    [InlineData("9223372036854775807", true)]   // long.MaxValue
+    [InlineData("9223372036854775808", false)]  // overflow
+    [InlineData("not-a-number", false)]
+    public void Lifetime_offset_accepts_any_long(string value, bool expectedOk)
+    {
+        var result = _v.Validate(SettingKeys.LifetimeOffsetWh, value);
+        Assert.Equal(expectedOk, result.Ok);
+    }
 }

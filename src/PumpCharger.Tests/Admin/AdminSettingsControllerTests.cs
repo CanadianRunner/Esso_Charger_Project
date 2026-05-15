@@ -172,6 +172,180 @@ public class AdminSettingsControllerTests
     }
 
     [Fact]
+    public async Task PATCH_audit_log_includes_oldValue_and_newValue()
+    {
+        await using var factory = new TestApiFactory();
+        var client = await AuthAsync(factory);
+
+        await client.PatchAsJsonAsync("/api/admin/settings", new
+        {
+            Values = new Dictionary<string, string>
+            {
+                [SettingKeys.DisplayBrightnessDim] = "0.4",
+            },
+        });
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        // Latest entry for this key — earlier ones are seed writes which
+        // legitimately have no oldValue.
+        var entry = await db.AuditLogs
+            .Where(e => e.Action == "settings.update" && e.Details.Contains(SettingKeys.DisplayBrightnessDim))
+            .OrderByDescending(e => e.Timestamp)
+            .FirstAsync();
+        Assert.Contains("\"oldValue\":\"0.6\"", entry.Details);
+        Assert.Contains("\"newValue\":\"0.4\"", entry.Details);
+    }
+
+    [Fact]
+    public async Task Lifetime_change_without_reason_returns_400_and_does_not_write()
+    {
+        await using var factory = new TestApiFactory();
+        var client = await AuthAsync(factory);
+
+        var resp = await client.PatchAsJsonAsync("/api/admin/settings", new
+        {
+            Values = new Dictionary<string, string>
+            {
+                [SettingKeys.LifetimeOffsetWh] = "500000",
+            },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var row = await db.Settings.FirstAsync(s => s.Key == SettingKeys.LifetimeOffsetWh);
+        Assert.Equal("0", row.Value);  // unchanged from default
+    }
+
+    [Fact]
+    public async Task Lifetime_change_with_reason_writes_and_audits_with_reason()
+    {
+        await using var factory = new TestApiFactory();
+        var client = await AuthAsync(factory);
+
+        var resp = await client.PatchAsJsonAsync("/api/admin/settings", new
+        {
+            Values = new Dictionary<string, string>
+            {
+                [SettingKeys.LifetimeOffsetWh] = "500000",
+            },
+            Reason = "Adjustment to account for energy delivered before software installation",
+        });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal("500000", (await db.Settings.FirstAsync(s => s.Key == SettingKeys.LifetimeOffsetWh)).Value);
+        var entry = await db.AuditLogs
+            .Where(e => e.Details.Contains(SettingKeys.LifetimeOffsetWh))
+            .OrderByDescending(e => e.Timestamp)
+            .FirstAsync();
+        Assert.Contains("\"reason\":\"Adjustment to account for energy delivered before software installation\"", entry.Details);
+        Assert.Contains("\"oldValue\":\"0\"", entry.Details);
+        Assert.Contains("\"newValue\":\"500000\"", entry.Details);
+    }
+
+    [Fact]
+    public async Task Reason_attaches_only_to_lifetime_entry_in_a_mixed_batch()
+    {
+        await using var factory = new TestApiFactory();
+        var client = await AuthAsync(factory);
+
+        var resp = await client.PatchAsJsonAsync("/api/admin/settings", new
+        {
+            Values = new Dictionary<string, string>
+            {
+                [SettingKeys.LifetimeOffsetWh] = "100",
+                [SettingKeys.DisplayBrightnessDim] = "0.5",
+            },
+            Reason = "Reset offset after firmware upgrade",
+        });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var lifetimeEntry = await db.AuditLogs
+            .Where(e => e.Action == "settings.update" && e.Details.Contains(SettingKeys.LifetimeOffsetWh))
+            .OrderByDescending(e => e.Timestamp).FirstAsync();
+        var brightnessEntry = await db.AuditLogs
+            .Where(e => e.Action == "settings.update" && e.Details.Contains(SettingKeys.DisplayBrightnessDim))
+            .OrderByDescending(e => e.Timestamp).FirstAsync();
+        Assert.Contains("\"reason\":", lifetimeEntry.Details);
+        Assert.DoesNotContain("\"reason\":", brightnessEntry.Details);
+    }
+
+    [Fact]
+    public async Task Rejected_PATCH_writes_an_aggregated_audit_log_entry()
+    {
+        await using var factory = new TestApiFactory();
+        var client = await AuthAsync(factory);
+
+        var resp = await client.PatchAsJsonAsync("/api/admin/settings", new
+        {
+            Values = new Dictionary<string, string>
+            {
+                [SettingKeys.DisplayBrightnessActive] = "5.0",   // out of range
+                [SettingKeys.DisplayOvernightStartHour] = "99",   // out of range
+            },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var entries = await db.AuditLogs
+            .Where(e => e.Action == "settings.update_rejected")
+            .ToListAsync();
+        Assert.Single(entries);
+        var details = entries[0].Details;
+        Assert.Contains(SettingKeys.DisplayBrightnessActive, details);
+        Assert.Contains(SettingKeys.DisplayOvernightStartHour, details);
+        // Both errors should be captured in the same entry.
+        Assert.Contains("brightness", details);
+        Assert.Contains("hour", details);
+    }
+
+    [Fact]
+    public async Task Rejected_lifetime_without_reason_is_audited_as_rejection_with_the_specific_error()
+    {
+        await using var factory = new TestApiFactory();
+        var client = await AuthAsync(factory);
+
+        await client.PatchAsJsonAsync("/api/admin/settings", new
+        {
+            Values = new Dictionary<string, string>
+            {
+                [SettingKeys.LifetimeOffsetWh] = "500000",
+            },
+        });
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var entry = await db.AuditLogs.SingleAsync(e => e.Action == "settings.update_rejected");
+        Assert.Contains(SettingKeys.LifetimeOffsetWh, entry.Details);
+        Assert.Contains("reason", entry.Details, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Successful_PATCH_writes_no_settings_update_rejected_entry()
+    {
+        await using var factory = new TestApiFactory();
+        var client = await AuthAsync(factory);
+
+        await client.PatchAsJsonAsync("/api/admin/settings", new
+        {
+            Values = new Dictionary<string, string>
+            {
+                [SettingKeys.DisplayBrightnessDim] = "0.5",
+            },
+        });
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.False(await db.AuditLogs.AnyAsync(e => e.Action == "settings.update_rejected"));
+    }
+
+    [Fact]
     public async Task PATCH_with_empty_body_returns_400()
     {
         await using var factory = new TestApiFactory();

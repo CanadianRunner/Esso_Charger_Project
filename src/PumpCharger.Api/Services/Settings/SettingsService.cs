@@ -39,9 +39,10 @@ public class SettingsService : ISettingsService
         return decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var v) ? v : defaultValue;
     }
 
-    public async Task SetAsync(string key, string value, string actor = "system", CancellationToken ct = default)
+    public async Task SetAsync(string key, string value, string actor = "system", string? reason = null, CancellationToken ct = default)
     {
         var existing = await _db.Settings.FirstOrDefaultAsync(x => x.Key == key, ct);
+        var oldValue = existing?.Value;
         if (existing is null)
         {
             _db.Settings.Add(new Setting { Key = key, Value = value, UpdatedAt = DateTime.UtcNow });
@@ -57,7 +58,7 @@ public class SettingsService : ISettingsService
             Timestamp = DateTime.UtcNow,
             Actor = actor,
             Action = "settings.update",
-            Details = $"{{\"key\":\"{key}\",\"value\":\"{Escape(value)}\"}}"
+            Details = BuildAuditDetails(key, oldValue, value, reason),
         });
 
         await _db.SaveChangesAsync(ct);
@@ -67,7 +68,25 @@ public class SettingsService : ISettingsService
     {
         var existing = await _db.Settings.AsNoTracking().AnyAsync(x => x.Key == key, ct);
         if (existing) return;
-        await SetAsync(key, value, actor: "system", ct);
+        await SetAsync(key, value, actor: "system", reason: null, ct: ct);
+    }
+
+    private static string BuildAuditDetails(string key, string? oldValue, string newValue, string? reason)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append('{');
+        sb.Append("\"key\":\"").Append(Escape(key)).Append('"');
+        if (oldValue is not null)
+        {
+            sb.Append(",\"oldValue\":\"").Append(Escape(oldValue)).Append('"');
+        }
+        sb.Append(",\"newValue\":\"").Append(Escape(newValue)).Append('"');
+        if (!string.IsNullOrEmpty(reason))
+        {
+            sb.Append(",\"reason\":\"").Append(Escape(reason)).Append('"');
+        }
+        sb.Append('}');
+        return sb.ToString();
     }
 
     public async Task SeedDefaultsAsync(CancellationToken ct = default)

@@ -60,7 +60,7 @@ public class AuthController : ControllerBase
             return Conflict(new { error = "An admin password is already set." });
 
         var hash = _hasher.Hash(req.Password);
-        await _settings.SetAsync(SettingKeys.AdminPasswordHash, hash, actor: "system", ct);
+        await _settings.SetAsync(SettingKeys.AdminPasswordHash, hash, actor: "system", ct: ct);
         _db.AuditLogs.Add(new AuditLog
         {
             Timestamp = DateTime.UtcNow,

@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PumpCharger.Api.Auth;
+using PumpCharger.Api.Data;
 using PumpCharger.Api.Models.Admin;
 using PumpCharger.Api.Services.Settings;
+using PumpCharger.Core.Entities;
+using PumpCharger.Core.Settings;
 
 namespace PumpCharger.Api.Controllers;
 
@@ -13,11 +16,19 @@ public class AdminSettingsController : ControllerBase
 {
     private readonly ISettingsService _settings;
     private readonly SettingsValidator _validator;
+    private readonly AppDbContext _db;
+    private readonly Func<DateTime> _clock;
 
-    public AdminSettingsController(ISettingsService settings, SettingsValidator validator)
+    public AdminSettingsController(
+        ISettingsService settings,
+        SettingsValidator validator,
+        AppDbContext db,
+        Func<DateTime> clock)
     {
         _settings = settings;
         _validator = validator;
+        _db = db;
+        _clock = clock;
     }
 
     /// <summary>
@@ -65,16 +76,29 @@ public class AdminSettingsController : ControllerBase
             }
         }
 
+        // Lifetime offset changes require a written reason — caught here as
+        // a validation error so the client can surface it inline.
+        if (req.Values.ContainsKey(SettingKeys.LifetimeOffsetWh)
+            && string.IsNullOrWhiteSpace(req.Reason))
+        {
+            errors.Add(new SettingsValidationError(
+                SettingKeys.LifetimeOffsetWh,
+                "Lifetime offset changes require a reason."));
+        }
+
         if (errors.Count > 0)
         {
+            await WriteRejectionAuditAsync(req.Values.Keys, errors, ct);
             return BadRequest(new { errors });
         }
 
-        // All validated — apply writes. SettingsService.SetAsync writes its
-        // own audit log entry per change.
+        // All validated — apply writes. The reason is attached only to the
+        // lifetime entry; other keys in the same batch get null reasons so
+        // their audit entries don't claim an unrelated explanation.
         foreach (var (key, value) in req.Values)
         {
-            await _settings.SetAsync(key, value, actor: "admin", ct);
+            var keyReason = key == SettingKeys.LifetimeOffsetWh ? req.Reason : null;
+            await _settings.SetAsync(key, value, actor: "admin", reason: keyReason, ct: ct);
         }
 
         // Return the refreshed snapshot so the client can update its draft state.
@@ -85,4 +109,45 @@ public class AdminSettingsController : ControllerBase
         }
         return Ok(new SettingsResponse(refreshed));
     }
+
+    /// <summary>
+    /// Record a single audit log entry per rejected PATCH so the audit trail
+    /// captures admin-intent-with-validation-failure, not just successful
+    /// changes. Aggregates all errors in the batch into one entry (one row
+    /// per failed PATCH, not per failed key) to keep log noise down.
+    /// </summary>
+    private async Task WriteRejectionAuditAsync(
+        IEnumerable<string> attemptedKeys, List<SettingsValidationError> errors, CancellationToken ct)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("{\"keys\":[");
+        var first = true;
+        foreach (var k in attemptedKeys)
+        {
+            if (!first) sb.Append(',');
+            sb.Append('"').Append(Escape(k)).Append('"');
+            first = false;
+        }
+        sb.Append("],\"errors\":[");
+        first = true;
+        foreach (var err in errors)
+        {
+            if (!first) sb.Append(',');
+            sb.Append("{\"key\":\"").Append(Escape(err.Key))
+              .Append("\",\"error\":\"").Append(Escape(err.Error)).Append("\"}");
+            first = false;
+        }
+        sb.Append("]}");
+
+        _db.AuditLogs.Add(new AuditLog
+        {
+            Timestamp = _clock(),
+            Actor = "admin",
+            Action = "settings.update_rejected",
+            Details = sb.ToString(),
+        });
+        await _db.SaveChangesAsync(ct);
+    }
+
+    private static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }

@@ -60,6 +60,23 @@ public class SettingsValidator
             SettingKeys.HpwcPollIntervalIdleMs => IntInRange(value, 500, 60_000, "idle poll interval"),
             SettingKeys.HpwcTimeoutMs => IntInRange(value, 500, 30_000, "request timeout"),
 
+            // Rate.
+            SettingKeys.RateSource => OneOf(value, new[] { "manual", "openei" }, "rate source"),
+            SettingKeys.RateFlatCentsPerKwh => IntInRange(value, 0, 1000, "flat rate"),
+            // API key and schedule ID are free-form strings; empty is legal.
+            SettingKeys.RateOpenEiApiKey => StringWithinLength(value, 256, "API key"),
+            SettingKeys.RateOpenEiScheduleId => StringWithinLength(value, 256, "schedule ID"),
+
+            // Session.
+            SettingKeys.SessionMergeGraceSeconds => IntInRange(value, 0, 3600, "merge grace"),
+            SettingKeys.SessionIdleThresholdAmps => DecimalInRange(value, 0m, 20m, "idle threshold"),
+            // 0 disables; >0 is the sample interval in seconds, capped at 1 hour.
+            SettingKeys.SessionPowerSampleIntervalSeconds => IntInRange(value, 0, 3600, "power sample interval"),
+
+            // Lifetime offset: signed Wh. No practical bounds — adjustments at
+            // home-charger scale fit comfortably inside Int64.
+            SettingKeys.LifetimeOffsetWh => LongAny(value, "lifetime offset"),
+
             _ => ValidationResult.Fail($"Setting '{key}' is not admin-editable."),
         };
     }
@@ -70,6 +87,28 @@ public class SettingsValidator
             return ValidationResult.Fail($"'{value}' is not a valid integer for {label}.");
         if (v < min || v > max)
             return ValidationResult.Fail($"{label} must be between {min} and {max}.");
+        return ValidationResult.Success();
+    }
+
+    private static ValidationResult OneOf(string value, string[] allowed, string label)
+    {
+        foreach (var a in allowed)
+        {
+            if (value == a) return ValidationResult.Success();
+        }
+        return ValidationResult.Fail($"{label} must be one of: {string.Join(", ", allowed)}.");
+    }
+
+    private static ValidationResult StringWithinLength(string value, int maxLength, string label)
+    {
+        if (value.Length > maxLength) return ValidationResult.Fail($"{label} is too long.");
+        return ValidationResult.Success();
+    }
+
+    private static ValidationResult LongAny(string value, string label)
+    {
+        if (!long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+            return ValidationResult.Fail($"'{value}' is not a valid integer for {label}.");
         return ValidationResult.Success();
     }
 
