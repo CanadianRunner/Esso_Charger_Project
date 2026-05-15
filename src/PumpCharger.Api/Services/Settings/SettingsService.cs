@@ -78,6 +78,11 @@ public class SettingsService : ISettingsService
         await SetIfMissingAsync(SettingKeys.SessionIdleThresholdAmps, "0.5", ct);
         await SetIfMissingAsync(SettingKeys.SessionPowerSampleIntervalSeconds, "10", ct);
         await SetIfMissingAsync(SettingKeys.LifetimeOffsetWh, "0", ct);
+        await SetIfMissingAsync(SettingKeys.HpwcHost, "", ct);
+        await SetIfMissingAsync(SettingKeys.HpwcPollIntervalActiveMs, "1000", ct);
+        await SetIfMissingAsync(SettingKeys.HpwcPollIntervalIdleMs, "5000", ct);
+        await SetIfMissingAsync(SettingKeys.HpwcTimeoutMs, "3000", ct);
+        await SetIfMissingAsync(SettingKeys.ShellyHost, "", ct);
         await SetIfMissingAsync(SettingKeys.DisplayMiniRotationSeconds, "10", ct);
         await SetIfMissingAsync(SettingKeys.DisplayPostSessionBrightSeconds, "300", ct);
         await SetIfMissingAsync(SettingKeys.DisplayPostSessionDimSeconds, "600", ct);

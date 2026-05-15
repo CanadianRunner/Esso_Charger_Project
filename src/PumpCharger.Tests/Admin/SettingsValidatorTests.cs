@@ -80,4 +80,48 @@ public class SettingsValidatorTests
         Assert.False(result.Ok);
         Assert.Contains("brightness", result.Error);
     }
+
+    [Theory]
+    [InlineData("", true)]
+    [InlineData("192.168.1.42", true)]
+    [InlineData("hpwc.local", true)]
+    [InlineData("2001:db8::1", true)]
+    [InlineData("with space", false)]
+    [InlineData("has\"quote", false)]
+    [InlineData("has/slash", false)]
+    public void Hpwc_host_accepts_hostnames_and_ip_literals_but_rejects_obvious_junk(string value, bool expectedOk)
+    {
+        var result = _v.Validate(SettingKeys.HpwcHost, value);
+        Assert.Equal(expectedOk, result.Ok);
+    }
+
+    [Fact]
+    public void Hpwc_host_rejects_overly_long_values()
+    {
+        var result = _v.Validate(SettingKeys.HpwcHost, new string('a', 300));
+        Assert.False(result.Ok);
+    }
+
+    [Theory]
+    [InlineData("500", true)]
+    [InlineData("1000", true)]
+    [InlineData("30000", true)]
+    [InlineData("499", false)]
+    [InlineData("30001", false)]
+    [InlineData("0", false)]
+    public void Hpwc_active_poll_interval_must_be_in_500_to_30000_ms(string value, bool expectedOk)
+    {
+        var result = _v.Validate(SettingKeys.HpwcPollIntervalActiveMs, value);
+        Assert.Equal(expectedOk, result.Ok);
+    }
+
+    [Theory]
+    [InlineData("500", true)]
+    [InlineData("60000", true)]
+    [InlineData("60001", false)]
+    public void Hpwc_idle_poll_interval_allows_up_to_60s(string value, bool expectedOk)
+    {
+        var result = _v.Validate(SettingKeys.HpwcPollIntervalIdleMs, value);
+        Assert.Equal(expectedOk, result.Ok);
+    }
 }

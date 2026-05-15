@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { SettingsSaveError, useAdminSettings } from '../../hooks/useAdminSettings';
 import { useDirtyGuard } from '../../hooks/useDirtyGuard';
 import SettingsGeneralTab from './settings/SettingsGeneralTab';
+import SettingsHardwareTab from './settings/SettingsHardwareTab';
 import type { SettingsDraft } from '../../types/AdminSettings';
 
 // Tab switching within the Settings page is intentionally non-destructive —
@@ -20,7 +21,7 @@ interface TabSpec {
 
 const TABS: TabSpec[] = [
   { key: 'general', label: 'General', active: true },
-  { key: 'hardware', label: 'Hardware', active: false, note: 'Coming next' },
+  { key: 'hardware', label: 'Hardware', active: true },
   { key: 'rate', label: 'Rate', active: false, note: 'Coming next' },
   { key: 'session', label: 'Session', active: false, note: 'Coming next' },
   { key: 'lifetime', label: 'Lifetime', active: false, note: 'Coming next' },
@@ -156,6 +157,9 @@ export default function AdminSettings() {
       <section>
         {activeTab === 'general' && (
           <SettingsGeneralTab values={draft} fieldErrors={fieldErrors} onChange={update} />
+        )}
+        {activeTab === 'hardware' && (
+          <SettingsHardwareTab values={draft} fieldErrors={fieldErrors} onChange={update} />
         )}
       </section>
 

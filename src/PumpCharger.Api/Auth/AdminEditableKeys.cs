@@ -28,10 +28,20 @@ public static class AdminEditableKeys
         SettingKeys.DisplayDialExerciseIntervalSeconds,
     };
 
+    /// <summary>Keys editable via the Hardware tab.</summary>
+    public static readonly IReadOnlySet<string> Hardware = new HashSet<string>
+    {
+        SettingKeys.HpwcHost,
+        SettingKeys.HpwcPollIntervalActiveMs,
+        SettingKeys.HpwcPollIntervalIdleMs,
+        SettingKeys.HpwcTimeoutMs,
+        SettingKeys.ShellyHost,
+    };
+
     /// <summary>
     /// Aggregate of all keys editable across every tab. The controller
     /// validates that PATCH keys appear in this set; future tab commits add
     /// their categories to this aggregate.
     /// </summary>
-    public static readonly IReadOnlySet<string> All = new HashSet<string>(General);
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(General.Concat(Hardware));
 }

@@ -23,3 +23,20 @@ export interface SettingsErrorResponse {
   errors?: SettingsValidationError[];
   error?: string;
 }
+
+export interface HardwareTestResponse {
+  success: boolean;
+  latencyMs: number;
+  error: string | null;
+  details: Record<string, string> | null;
+}
+
+export interface ClientInfo {
+  mode: string;
+  enabled: boolean | null;
+}
+
+export interface HardwareInfoResponse {
+  hpwc: ClientInfo;
+  shelly: ClientInfo;
+}

@@ -12,6 +12,9 @@ public static class SettingKeys
     public const string SessionPowerSampleIntervalSeconds = "session.power_sample_interval_seconds";  // int, default 10
 
     public const string HpwcHost = "hpwc.host";
+    public const string HpwcPollIntervalActiveMs = "hpwc.poll_interval_active_ms";  // int, default 1000
+    public const string HpwcPollIntervalIdleMs = "hpwc.poll_interval_idle_ms";      // int, default 5000
+    public const string HpwcTimeoutMs = "hpwc.timeout_ms";                          // int, default 3000
     public const string ShellyHost = "shelly.host";
 
     public const string LifetimeOffsetWh = "lifetime.offset_wh";  // long

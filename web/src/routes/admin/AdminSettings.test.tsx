@@ -14,6 +14,16 @@ const INITIAL_SETTINGS = {
   'display.overnight_start_hour': '23',
   'display.overnight_end_hour': '6',
   'display.dial_exercise_interval_seconds': '3600',
+  'hpwc.host': '',
+  'hpwc.poll_interval_active_ms': '1000',
+  'hpwc.poll_interval_idle_ms': '5000',
+  'hpwc.timeout_ms': '3000',
+  'shelly.host': '',
+};
+
+const HARDWARE_INFO = {
+  hpwc: { mode: 'Fake', enabled: null },
+  shelly: { mode: 'Fake', enabled: true },
 };
 
 interface FetchCall {
@@ -26,7 +36,11 @@ function setupMockFetch(initial = INITIAL_SETTINGS) {
   const calls: FetchCall[] = [];
   const state = { values: { ...initial } as Record<string, string> };
   global.fetch = vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
-    calls.push({ url: url.toString(), method: init?.method ?? 'GET', body: init?.body as string });
+    const u = url.toString();
+    calls.push({ url: u, method: init?.method ?? 'GET', body: init?.body as string });
+    if (u.endsWith('/api/admin/hardware')) {
+      return Promise.resolve(json(HARDWARE_INFO));
+    }
     if (init?.method === 'PATCH') {
       const body = JSON.parse((init.body as string) ?? '{}') as { values: Record<string, string> };
       for (const [k, v] of Object.entries(body.values)) state.values[k] = v;
@@ -70,10 +84,11 @@ describe('AdminSettings', () => {
 
   it('loads server values into the General tab fields', async () => {
     renderAt();
-    await screen.findByText(/mini-readout rotation/i);
-    // Brightness Active displays as 100 (% of 1.0)
-    const brightnessInputs = screen.getAllByDisplayValue('100');
-    expect(brightnessInputs.length).toBeGreaterThan(0);
+    // Wait for the percent-formatted brightness inputs to be populated, not
+    // just the section heading. The draft state-sync useEffect runs one
+    // render after serverValues populates, so asserting on a settled input
+    // value is the only deterministic signal that the draft has hydrated.
+    await screen.findAllByDisplayValue('100');
     expect(screen.getByDisplayValue('60')).toBeInTheDocument(); // dim 0.6 → 60
     expect(screen.getByDisplayValue('30')).toBeInTheDocument(); // overnight 0.3 → 30
   });
@@ -178,5 +193,16 @@ describe('AdminSettings', () => {
     expect(toggle.checked).toBe(true);
     await user.click(toggle);
     expect(toggle.checked).toBe(false);
+  });
+
+  it('clicking the Hardware tab swaps the visible content to Hardware fields', async () => {
+    const user = userEvent.setup();
+    renderAt();
+    await screen.findByText(/mini-readout rotation/i);
+
+    await user.click(screen.getByRole('button', { name: 'Hardware' }));
+    expect(await screen.findByText(/HPWC \(Tesla Wall Connector\)/i)).toBeInTheDocument();
+    // General-tab content is no longer rendered.
+    expect(screen.queryByText(/mini-readout rotation/i)).not.toBeInTheDocument();
   });
 });

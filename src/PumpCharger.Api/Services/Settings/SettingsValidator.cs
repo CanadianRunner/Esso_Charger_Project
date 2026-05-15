@@ -48,6 +48,18 @@ public class SettingsValidator
             // below 300 get clamped client-side. Reject negatives outright.
             SettingKeys.DisplayDialExerciseIntervalSeconds => IntInRange(value, 0, 86400, "interval seconds"),
 
+            // Hardware: host strings allowed empty (means "not configured").
+            // No deeper format check — hostnames and IPv4/IPv6 literals all
+            // accepted; the test-connection endpoint will surface bad hosts
+            // with concrete error messages.
+            SettingKeys.HpwcHost => HostOrEmpty(value),
+            SettingKeys.ShellyHost => HostOrEmpty(value),
+
+            // Hardware: HPWC poller timings in milliseconds.
+            SettingKeys.HpwcPollIntervalActiveMs => IntInRange(value, 500, 30_000, "active poll interval"),
+            SettingKeys.HpwcPollIntervalIdleMs => IntInRange(value, 500, 60_000, "idle poll interval"),
+            SettingKeys.HpwcTimeoutMs => IntInRange(value, 500, 30_000, "request timeout"),
+
             _ => ValidationResult.Fail($"Setting '{key}' is not admin-editable."),
         };
     }
@@ -58,6 +70,21 @@ public class SettingsValidator
             return ValidationResult.Fail($"'{value}' is not a valid integer for {label}.");
         if (v < min || v > max)
             return ValidationResult.Fail($"{label} must be between {min} and {max}.");
+        return ValidationResult.Success();
+    }
+
+    private static ValidationResult HostOrEmpty(string value)
+    {
+        // Empty is acceptable ("not configured"). Otherwise reject only the
+        // obvious problem characters; leave finer-grained validation to the
+        // test-connection endpoint that actually tries to reach the host.
+        if (value.Length == 0) return ValidationResult.Success();
+        if (value.Length > 253) return ValidationResult.Fail("host is too long.");
+        foreach (var c in value)
+        {
+            if (c <= ' ' || c == '"' || c == '\'' || c == '/' || c == '\\')
+                return ValidationResult.Fail("host contains invalid characters.");
+        }
         return ValidationResult.Success();
     }
 

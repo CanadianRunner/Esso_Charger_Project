@@ -1,16 +1,26 @@
-using Microsoft.Extensions.Options;
-using PumpCharger.Api.Config;
+using PumpCharger.Api.Services.Settings;
 using PumpCharger.Core.External;
+using PumpCharger.Core.Settings;
 
 namespace PumpCharger.Api.Services.Polling;
 
+/// <summary>
+/// Polls the HPWC for vitals on a configurable cadence and publishes the
+/// result through <see cref="VitalsBus"/>. Poll intervals (active / idle) and
+/// per-request timeout read live from the settings table so the admin
+/// Hardware tab can tune them without a backend restart.
+/// </summary>
 public class HpwcPollerService : BackgroundService
 {
+    private const int DefaultPollIntervalActiveMs = 1000;
+    private const int DefaultPollIntervalIdleMs = 5000;
+    private const int DefaultTimeoutMs = 3000;
+
     private readonly IHpwcClient _hpwc;
     private readonly VitalsBus _bus;
     private readonly PollerHealth _health;
     private readonly Func<DateTime> _clock;
-    private readonly IOptionsMonitor<HpwcOptions> _options;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<HpwcPollerService> _log;
 
     public HpwcPollerService(
@@ -18,14 +28,14 @@ public class HpwcPollerService : BackgroundService
         VitalsBus bus,
         PollerHealth health,
         Func<DateTime> clock,
-        IOptionsMonitor<HpwcOptions> options,
+        IServiceScopeFactory scopeFactory,
         ILogger<HpwcPollerService> log)
     {
         _hpwc = hpwc;
         _bus = bus;
         _health = health;
         _clock = clock;
-        _options = options;
+        _scopeFactory = scopeFactory;
         _log = log;
     }
 
@@ -36,11 +46,11 @@ public class HpwcPollerService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            var opts = _options.CurrentValue;
+            var (timeoutMs, pollActiveMs, pollIdleMs) = await ReadTimingsAsync(stoppingToken);
             try
             {
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-                cts.CancelAfter(opts.TimeoutMs);
+                cts.CancelAfter(timeoutMs);
 
                 var vitals = await _hpwc.GetVitalsAsync(cts.Token);
                 var pollAt = _clock();
@@ -63,7 +73,7 @@ public class HpwcPollerService : BackgroundService
                 }
             }
 
-            var delay = NextDelay(active, _health.ConsecutiveFailures, opts);
+            var delay = NextDelay(active, _health.ConsecutiveFailures, pollActiveMs, pollIdleMs);
             try { await Task.Delay(delay, stoppingToken); }
             catch (OperationCanceledException) { break; }
         }
@@ -71,11 +81,30 @@ public class HpwcPollerService : BackgroundService
         _log.LogInformation("HpwcPollerService stopping.");
     }
 
-    private static TimeSpan NextDelay(bool active, int failures, HpwcOptions opts)
+    private async Task<(int TimeoutMs, int PollActiveMs, int PollIdleMs)> ReadTimingsAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
+            var timeoutMs = await settings.GetIntAsync(SettingKeys.HpwcTimeoutMs, DefaultTimeoutMs, ct);
+            var pollActiveMs = await settings.GetIntAsync(SettingKeys.HpwcPollIntervalActiveMs, DefaultPollIntervalActiveMs, ct);
+            var pollIdleMs = await settings.GetIntAsync(SettingKeys.HpwcPollIntervalIdleMs, DefaultPollIntervalIdleMs, ct);
+            return (timeoutMs, pollActiveMs, pollIdleMs);
+        }
+        catch
+        {
+            // If the settings read fails for any reason, fall back to defaults
+            // rather than killing the poller.
+            return (DefaultTimeoutMs, DefaultPollIntervalActiveMs, DefaultPollIntervalIdleMs);
+        }
+    }
+
+    private static TimeSpan NextDelay(bool active, int failures, int pollActiveMs, int pollIdleMs)
     {
         // After 3 consecutive failures, back off to 30s.
         if (failures >= 3) return TimeSpan.FromSeconds(30);
-        var ms = active ? opts.PollIntervalActiveMs : opts.PollIntervalIdleMs;
+        var ms = active ? pollActiveMs : pollIdleMs;
         return TimeSpan.FromMilliseconds(ms);
     }
 }
